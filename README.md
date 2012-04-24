@@ -39,3 +39,12 @@ To log in, provide to the created sessions a valid username and password
 ```ruby
  @ami.login("mark","mysecret")
 ```
+
+Like all commands, it will return a Response command that could be parsed accordingly
+
+## Development
+
+Questions or problems? Please post them on the [issue tracker](https://github.com/emilianodellacasa/rami/issues). You can contribute changes by forking the project and submitting a pull request. You can ensure the tests passing by running `bundle` and `rake`.
+
+This gem is created by Emiliano Della Casa and is under the MIT License and it is distributed by courtesy of [Engim srl](http://www.engim.eu/en).
+
