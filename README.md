@@ -29,7 +29,7 @@ Simply run in your terminal
 To create a new AMI session, just call the following command
 
 ```ruby
- @session = Rami.new("192.168.1.1",5038)
+ @session = Rami::Rami.new("192.168.1.1",5038)
 ```
 
 ### LOGIN
