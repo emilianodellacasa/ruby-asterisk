@@ -1,6 +1,6 @@
 # RAMI
 
-This gem add support to tour ruby or rails projects to Asterisk Manager Interface
+This gem add support to your Ruby or RubyOnRails projects to Asterisk Manager Interface
 
 There was a project with the same name, but it appears to be discontinued so I decided to start a new project
 
@@ -29,7 +29,7 @@ Simply run in your terminal
 To create a new AMI session, just call the following command
 
 ```ruby
- @session = Rami::Rami.new("192.168.1.1",5038)
+ @ami = Rami::Rami.new("192.168.1.1",5038)
 ```
 
 ### LOGIN
@@ -37,5 +37,5 @@ To create a new AMI session, just call the following command
 To log in, provide to the created sessions a valid username and password 
 
 ```ruby
- @session.login("mark","mysecret")
+ @ami.login("mark","mysecret")
 ```
