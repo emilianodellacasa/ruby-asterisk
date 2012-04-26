@@ -38,6 +38,14 @@ describe Rami::Response do
 		ActionID: 899"
 	end
 
+	def originate_response
+		"Event: Dial
+		Privilege: call,all
+		SubEvent: End
+		Channel: SIP/9100-0000002b
+		UniqueID: 1335457364.68
+		DialStatus: CHANUNAVAIL"
+	end
 
 	describe ".new" do
 		
@@ -63,6 +71,18 @@ describe Rami::Response do
 				@response = Rami::Response.new("ParkedCalls",parked_calls_response)
 				@response.data[:calls][0]["Exten"].should eq("701")
 			end
-		end	
+		end
+
+		describe "resceiving a Originate request" do 
+			it "should parse correctly data coming from Asterisk about the call" do
+        @response = Rami::Response.new("Originate",originate_response)
+        @response.data[:dial].should_not be_empty
+      end
+
+      it "should correctly fill the fields" do
+        @response = Rami::Response.new("Originate",originate_response)
+        @response.data[:dial][0]["UniqueID"].should eq("1335457364.68")
+      end
+    end
 	end
 end

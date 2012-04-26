@@ -133,4 +133,11 @@ describe Rami do
       @session.parked_calls.data[:calls].should_not be_nil
     end
   end
+
+	describe ".originate" do
+		it "should return a response object" do
+			@session.login("mark","mysecret")
+			@session.originate("SIP/9100","OUTGOING","123456","1").should be_kind_of(Rami::Response)
+		end
+	end
 end

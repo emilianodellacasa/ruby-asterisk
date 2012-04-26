@@ -69,5 +69,16 @@ module Rami
       end
       Response.new("ParkedCalls",request.response_data)
     end
+
+		def originate(caller,context,callee,priority)
+			request = Request.new("Originate",{"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000"  })
+			request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 30) do |data|
+        request.response_data << data
+      end
+      Response.new("Originate",request.response_data)
+		end
 	end
 end

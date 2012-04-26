@@ -40,8 +40,14 @@ module Rami
 					self._parse_data_core_show_channels(response)
 				when "ParkedCalls"
 					self._parse_data_parked_calls(response)
+				when "Originate"
+					self._parse_originate_calls(response)
 			end
     end
+
+		def _parse_originate_calls(response)
+			self._parse_objects(response,:dial,"Event: Dial")
+		end
 
 		def _parse_data_parked_calls(response)
 			self._parse_objects(response,:calls,"Event: ParkedCall")
