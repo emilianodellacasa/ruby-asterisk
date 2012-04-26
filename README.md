@@ -42,6 +42,26 @@ To log in, provide to the created sessions a valid username and password
 
 Like all commands, it will return a Response command that could be parsed accordingly
 
+### CORE SHOW CHANNELS
+
+To get a list of all channels currently active on your Asterisk installation, use the following command
+
+```ruby
+ @ami.core_show_channels
+```
+
+### THE RESPONSE OBJECT
+
+The response object contains all information about all data received from Asterisk. Here follows a list of all object's properties:
+
+- type
+- success
+- action_id
+- message
+- data
+
+The data property contains all additional information obtained from Asterisk, like for example the list of active channels after a "core show channels" command.
+
 ## Development
 
 Questions or problems? Please post them on the [issue tracker](https://github.com/emilianodellacasa/rami/issues). You can contribute changes by forking the project and submitting a pull request. You can ensure the tests passing by running `bundle` and `rake`.
