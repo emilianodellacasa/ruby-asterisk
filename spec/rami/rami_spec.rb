@@ -121,4 +121,16 @@ describe Rami do
 			@session.core_show_channels.data[:channels].should_not be_nil
 		end 
 	end
+
+	describe ".parked_calls" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.parked_calls.should be_kind_of(Rami::Response)
+    end
+
+    it "should contain additional data about parked calls" do
+      @session.login("mark","mysecret")
+      @session.parked_calls.data[:calls].should_not be_nil
+    end
+  end
 end

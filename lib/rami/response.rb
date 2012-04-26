@@ -35,26 +35,39 @@ module Rami
 		end
 
 		def _parse_data(response)
-			self._parse_data_core_show_channels(response) if self.type.eql?("CoreShowChannels")
+			case self.type
+				when "CoreShowChannels"
+					self._parse_data_core_show_channels(response)
+				when "ParkedCalls"
+					self._parse_data_parked_calls(response)
+			end
     end
 
+		def _parse_data_parked_calls(response)
+			self._parse_objects(response,:calls,"Event: ParkedCall")
+		end
+
 		def _parse_data_core_show_channels(response)
-			_data = { :channels => [] }
-			parsing = false
-			channel = nil
-			response.each_line do |line|
-				if line.start_with?("Event: CoreShowChannel")
-					_data[:channels] << channel unless channel.nil?
-					channel = {}
-					parsing = true
-				elsif line.strip.empty?
+			self._parse_objects(response,:channels,"Event: CoreShowChannel")
+		end
+
+		def _parse_objects(response,symbol_name,search_for)
+			 _data = { symbol_name => [] }
+      parsing = false
+      object = nil
+      response.each_line do |line|
+        if line.start_with?(search_for)
+          _data[symbol_name] << object unless object.nil?
+          object = {}
+          parsing = true
+        elsif line.strip.empty?
           parsing = false
-				elsif parsing
-					channel[line.split(':')[0].strip]=line.split(':')[1].strip unless line.split(':')[1].nil?
-				end
-			end
-			_data[:channels] << channel unless channel.nil?
-			_data
+        elsif parsing
+          object[line.split(':')[0].strip]=line.split(':')[1].strip unless line.split(':')[1].nil?
+        end
+      end
+      _data[symbol_name] << object unless object.nil?
+      _data
 		end
 	end
 end

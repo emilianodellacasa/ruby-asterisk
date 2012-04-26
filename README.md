@@ -50,6 +50,15 @@ To get a list of all channels currently active on your Asterisk installation, us
  @ami.core_show_channels
 ```
 
+### PARKED CALLS
+
+To get a list of all parked calls on your Asterisk PBX, use the following command
+
+```ruby
+ @ami.parked_calls
+```
+
+
 ### THE RESPONSE OBJECT
 
 The response object contains all information about all data received from Asterisk. Here follows a list of all object's properties:

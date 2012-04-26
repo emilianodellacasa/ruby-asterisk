@@ -38,7 +38,6 @@ module Rami
 
 		def login(username,password)
 			self.connect unless self.connected
-			response_data = ""	
 			request = Request.new("Login",{"Username" => username, "Secret" => password})
 			request.commands.each do |command|
 				@session.write(command)
@@ -50,7 +49,6 @@ module Rami
 		end
 
 		def core_show_channels
-			response_data = ""
       request = Request.new("CoreShowChannels")
       request.commands.each do |command|
         @session.write(command)
@@ -60,5 +58,16 @@ module Rami
       end
       Response.new("CoreShowChannels",request.response_data)
 		end
+
+		def parked_calls
+      request = Request.new("ParkedCalls")
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("ParkedCalls",request.response_data)
+    end
 	end
 end

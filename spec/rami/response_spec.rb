@@ -24,6 +24,20 @@ describe Rami::Response do
 		BridgedUniqueID:"
 	end
 
+	def parked_calls_response
+		"Event: ParkedCall
+		Parkinglot: default
+		Exten: 701
+		Channel: SIP/195.62.226.2-00000026
+		From: SIP/195.62.226.2-00000026
+		Timeout: 3
+		CallerIDNum: 3335313510
+		CallerIDName:
+		ConnectedLineNum:
+		ConnectedLineName:
+		ActionID: 899"
+	end
+
 
 	describe ".new" do
 		
@@ -38,6 +52,17 @@ describe Rami::Response do
         @response.data[:channels][0]["CallerIDnum"].should eq("3335313510")
       end
 		end
-		
+	
+		describe "receiving a Parked Calls request" do
+			it "should parse correctly data coming from Asterisk about calls" do
+				@response = Rami::Response.new("ParkedCalls",parked_calls_response)
+				@response.data[:calls].should_not be_empty
+			end
+
+			it "should correctly fill the fields" do
+				@response = Rami::Response.new("ParkedCalls",parked_calls_response)
+				@response.data[:calls][0]["Exten"].should eq("701")
+			end
+		end	
 	end
 end
