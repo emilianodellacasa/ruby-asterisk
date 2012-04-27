@@ -1,4 +1,4 @@
 require 'rubygems'
 require 'bundler'
 
-require 'rami'
+require 'ruby-asterisk'
