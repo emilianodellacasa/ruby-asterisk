@@ -2,28 +2,6 @@
 require 'spec_helper'
 describe RubyAsterisk do
 
-	def core_show_channels_response
-		"Event: CoreShowChannel
-		ActionID: 839
-		Channel: SIP/195.62.226.4-00000025
-		UniqueID: 1335448133.61
-		Context: incoming
-		Extension: s
-		Priority: 1
-		ChannelState: 6
-		ChannelStateDesc: Up
-		Application: Parked Call
-		ApplicationData:
-		CallerIDnum: 3335313510
-		CallerIDname:
-		ConnectedLineNum:
-		ConnectedLineName:
-		Duration: 00:00:05
-		AccountCode:
-		BridgedChannel:
-		BridgedUniqueID:"
-	end
-
 	def mock_request(stubs={})
     (@mock_request ||= mock_model(RubyAsterisk::Request).as_null_object).tap do |request|
       request.stub(stubs) unless stubs.empty?
