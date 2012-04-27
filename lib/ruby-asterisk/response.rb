@@ -41,11 +41,17 @@ module RubyAsterisk
 				when "ParkedCalls"
 					self._parse_data_parked_calls(response)
 				when "Originate"
-					self._parse_originate_calls(response)
+					self._parse_originate(response)
+				when "MeetMeList"
+          self._parse_meet_me_list(response)
 			end
     end
 
-		def _parse_originate_calls(response)
+		def _parse_meet_me_list(response)
+      self._parse_objects(response,:rooms,"Event: MeetmeList")
+    end
+
+		def _parse_originate(response)
 			self._parse_objects(response,:dial,"Event: Dial")
 		end
 

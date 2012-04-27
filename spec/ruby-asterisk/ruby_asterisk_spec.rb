@@ -118,4 +118,18 @@ describe RubyAsterisk do
 			@session.originate("SIP/9100","OUTGOING","123456","1").should be_kind_of(RubyAsterisk::Response)
 		end
 	end
+
+	describe ".command" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.command("meetme list").should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
+	describe ".meet_me_list" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.meet_me_list.should be_kind_of(RubyAsterisk::Response)
+    end
+  end
 end

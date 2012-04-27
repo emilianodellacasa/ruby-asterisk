@@ -66,6 +66,25 @@ To start a new call use the following command
  @ami.originate("SIP/9100","OUTGOING","123456","1") # CALLER, CONTEXT, CALLEE, PRIORITY
 ```
 
+### COMMAND
+
+To execute a cli command use the following code
+
+```ruby
+ @ami.command("core show channels")
+```
+
+### MEETME LIST
+
+To get a list of all active conferences use the following command
+
+```ruby
+ @ami.meet_me_list
+```
+
+
+
+
 
 ### THE RESPONSE OBJECT
 

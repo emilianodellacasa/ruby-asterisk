@@ -48,6 +48,17 @@ module RubyAsterisk
 			Response.new("Login",request.response_data)
 		end
 
+		def command(command)
+			request = Request.new("Command",{ "Command" => command })
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("Command",request.response_data)
+		end
+
 		def core_show_channels
       request = Request.new("CoreShowChannels")
       request.commands.each do |command|
@@ -58,6 +69,17 @@ module RubyAsterisk
       end
       Response.new("CoreShowChannels",request.response_data)
 		end
+
+		def meet_me_list
+      request = Request.new("MeetMeList")
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("MeetMeList",request.response_data)
+    end
 
 		def parked_calls
       request = Request.new("ParkedCalls")

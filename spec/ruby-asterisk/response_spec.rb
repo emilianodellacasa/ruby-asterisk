@@ -14,7 +14,7 @@ describe RubyAsterisk::Response do
 		ChannelStateDesc: Up
 		Application: Parked Call
 		ApplicationData:
-		CallerIDnum: 3335313510
+		CallerIDnum: 123456
 		CallerIDname:
 		ConnectedLineNum:
 		ConnectedLineName:
@@ -31,7 +31,7 @@ describe RubyAsterisk::Response do
 		Channel: SIP/195.62.226.2-00000026
 		From: SIP/195.62.226.2-00000026
 		Timeout: 3
-		CallerIDNum: 3335313510
+		CallerIDNum: 123456
 		CallerIDName:
 		ConnectedLineNum:
 		ConnectedLineName:
@@ -47,6 +47,23 @@ describe RubyAsterisk::Response do
 		DialStatus: CHANUNAVAIL"
 	end
 
+	def meet_me_list_response
+		"Event: MeetmeList
+		ActionID: 921
+		Conference: 1234
+		UserNumber: 1
+		CallerIDNum: 123456
+		CallerIDName: <no name>
+		ConnectedLineNum: <unknown>
+		ConnectedLineName: <no name>
+		Channel: SIP/195.62.226.18-0000000e
+		Admin: No
+		Role: Talk and listen
+		MarkedUser: No
+		Muted: No
+		Talking: Not monitored"
+	end
+
 	describe ".new" do
 		
 		describe "receiving a Core Show Channels request" do
@@ -57,7 +74,7 @@ describe RubyAsterisk::Response do
 
 			it "should correctly fill the fields" do
         @response = RubyAsterisk::Response.new("CoreShowChannels",core_show_channels_response)
-        @response.data[:channels][0]["CallerIDnum"].should eq("3335313510")
+        @response.data[:channels][0]["CallerIDnum"].should eq("123456")
       end
 		end
 	
@@ -73,7 +90,7 @@ describe RubyAsterisk::Response do
 			end
 		end
 
-		describe "resceiving a Originate request" do 
+		describe "receiving a Originate request" do 
 			it "should parse correctly data coming from Asterisk about the call" do
         @response = RubyAsterisk::Response.new("Originate",originate_response)
         @response.data[:dial].should_not be_empty
@@ -82,6 +99,18 @@ describe RubyAsterisk::Response do
       it "should correctly fill the fields" do
         @response = RubyAsterisk::Response.new("Originate",originate_response)
         @response.data[:dial][0]["UniqueID"].should eq("1335457364.68")
+      end
+    end
+		
+		describe "receiving a MeetMeList request" do
+      it "should parse correctly data coming from Asterisk about the conference room" do
+        @response = RubyAsterisk::Response.new("MeetMeList",meet_me_list_response)
+        @response.data[:rooms].should_not be_empty
+      end
+
+      it "should correctly fill the fields" do
+        @response = RubyAsterisk::Response.new("MeetMeList",meet_me_list_response)
+        @response.data[:rooms][0]["Conference"].should eq("1234")
       end
     end
 	end
