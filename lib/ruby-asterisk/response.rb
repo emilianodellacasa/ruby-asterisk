@@ -1,4 +1,4 @@
-module Rami
+module RubyAsterisk
 	class Response
 		attr_accessor :type, :success, :action_id, :message, :data
 		

@@ -1,6 +1,6 @@
 # encoding: utf-8
 require 'spec_helper'
-describe Rami::Response do
+describe RubyAsterisk::Response do
 
 	def core_show_channels_response
 		"Event: CoreShowChannel
@@ -51,36 +51,36 @@ describe Rami::Response do
 		
 		describe "receiving a Core Show Channels request" do
 			it "should parse correctly data coming from Asterisk about channels" do 
-				@response = Rami::Response.new("CoreShowChannels",core_show_channels_response)
+				@response = RubyAsterisk::Response.new("CoreShowChannels",core_show_channels_response)
 				@response.data[:channels].should_not be_empty
 			end
 
 			it "should correctly fill the fields" do
-        @response = Rami::Response.new("CoreShowChannels",core_show_channels_response)
+        @response = RubyAsterisk::Response.new("CoreShowChannels",core_show_channels_response)
         @response.data[:channels][0]["CallerIDnum"].should eq("3335313510")
       end
 		end
 	
 		describe "receiving a Parked Calls request" do
 			it "should parse correctly data coming from Asterisk about calls" do
-				@response = Rami::Response.new("ParkedCalls",parked_calls_response)
+				@response = RubyAsterisk::Response.new("ParkedCalls",parked_calls_response)
 				@response.data[:calls].should_not be_empty
 			end
 
 			it "should correctly fill the fields" do
-				@response = Rami::Response.new("ParkedCalls",parked_calls_response)
+				@response = RubyAsterisk::Response.new("ParkedCalls",parked_calls_response)
 				@response.data[:calls][0]["Exten"].should eq("701")
 			end
 		end
 
 		describe "resceiving a Originate request" do 
 			it "should parse correctly data coming from Asterisk about the call" do
-        @response = Rami::Response.new("Originate",originate_response)
+        @response = RubyAsterisk::Response.new("Originate",originate_response)
         @response.data[:dial].should_not be_empty
       end
 
       it "should correctly fill the fields" do
-        @response = Rami::Response.new("Originate",originate_response)
+        @response = RubyAsterisk::Response.new("Originate",originate_response)
         @response.data[:dial][0]["UniqueID"].should eq("1335457364.68")
       end
     end

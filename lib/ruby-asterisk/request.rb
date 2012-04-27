@@ -1,4 +1,4 @@
-module Rami
+module RubyAsterisk
 	class Request
 		attr_accessor :action, :action_id, :parameters, :response_data
 
