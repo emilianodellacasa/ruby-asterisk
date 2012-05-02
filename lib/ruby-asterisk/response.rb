@@ -60,20 +60,20 @@ module RubyAsterisk
 		end
 
 		def _parse_data_core_show_channels(response)
-			self._parse_objects(response,:channels,"Event: CoreShowChannel")
+			self._parse_objects(response,:channels,"Event: CoreShowChannel","Event: CoreShowChannelsComplete")
 		end
 
-		def _parse_objects(response,symbol_name,search_for)
+		def _parse_objects(response,symbol_name,search_for,stop_with=nil)
 			 _data = { symbol_name => [] }
       parsing = false
       object = nil
       response.each_line do |line|
-        if line.start_with?(search_for)
+				if line.strip.empty? or (!stop_with.nil? and line.start_with?(stop_with))
+          parsing = false
+        elsif line.start_with?(search_for)
           _data[symbol_name] << object unless object.nil?
           object = {}
           parsing = true
-        elsif line.strip.empty?
-          parsing = false
         elsif parsing
           object[line.split(':')[0].strip]=line.split(':')[1].strip unless line.split(':')[1].nil?
         end

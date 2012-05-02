@@ -2,6 +2,13 @@
 require 'spec_helper'
 describe RubyAsterisk::Response do
 
+	def empty_core_show_channels_response
+		"Event: CoreShowChannelsComplete
+		EventList: Complete
+    ListItems: 1
+    ActionID: 839"
+	end
+
 	def core_show_channels_response
 		"Event: CoreShowChannel
 		ActionID: 839
@@ -21,7 +28,12 @@ describe RubyAsterisk::Response do
 		Duration: 00:00:05
 		AccountCode:
 		BridgedChannel:
-		BridgedUniqueID:"
+		BridgedUniqueID:
+
+		Event: CoreShowChannelsComplete
+		EventList: Complete
+		ListItems: 1
+		ActionID: 839"
 	end
 
 	def parked_calls_response
@@ -76,6 +88,11 @@ describe RubyAsterisk::Response do
         @response = RubyAsterisk::Response.new("CoreShowChannels",core_show_channels_response)
         @response.data[:channels][0]["CallerIDnum"].should eq("123456")
       end
+
+			it "should have no channels if answer is empty" do
+				@response = RubyAsterisk::Response.new("CoreShowChannels",empty_core_show_channels_response)
+				@response.data[:channels].count.should eq(0)
+			end
 		end
 	
 		describe "receiving a Parked Calls request" do
