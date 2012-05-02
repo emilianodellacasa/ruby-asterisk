@@ -63,8 +63,9 @@ To get a list of all parked calls on your Asterisk PBX, use the following comman
 To start a new call use the following command
 
 ```ruby
- @ami.originate("SIP/9100","OUTGOING","123456","1") # CALLER, CONTEXT, CALLEE, PRIORITY
+ @ami.originate("SIP/9100","OUTGOING","123456","1","var1=12,var2=99") # CALLER, CONTEXT, CALLEE, PRIORITY, VARIABLE
 ```
+
 
 ### COMMAND
 
