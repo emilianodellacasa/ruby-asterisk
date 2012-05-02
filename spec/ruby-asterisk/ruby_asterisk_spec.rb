@@ -115,7 +115,7 @@ describe RubyAsterisk do
 	describe ".originate" do
 		it "should return a response object" do
 			@session.login("mark","mysecret")
-			@session.originate("SIP/9100","OUTGOING","123456","1").should be_kind_of(RubyAsterisk::Response)
+			@session.originate("SIP/9100","OUTGOING","123456","1","queue=SIP/1000&SIP/1001").should be_kind_of(RubyAsterisk::Response)
 		end
 	end
 
