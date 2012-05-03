@@ -74,19 +74,19 @@ module RubyAsterisk
 			_data[:hints].each do |hint|
 				case hint["Status"]
 					when "-1"
-						hint["Status"] = "Extension not found"
+						hint["DescriptiveStatus"] = "Extension not found"
 					when "0"
-						hint["Status"] = "Idle"
+						hint["DescriptiveStatus"] = "Idle"
 					when "1"
-            hint["Status"] = "In Use"
+            hint["DescriptiveStatus"] = "In Use"
 					when "2"
-            hint["Status"] = "Busy"
+            hint["DescriptiveStatus"] = "Busy"
 					when "4"
-            hint["Status"] = "Unavailable"
+            hint["DescriptiveStatus"] = "Unavailable"
 					when "8"
-            hint["Status"] = "Ringing"
+            hint["DescriptiveStatus"] = "Ringing"
 					when "16"
-            hint["Status"] = "On Hold"
+            hint["DescriptiveStatus"] = "On Hold"
 				end
 			end
 			_data

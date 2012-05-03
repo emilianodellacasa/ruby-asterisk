@@ -149,7 +149,8 @@ describe RubyAsterisk::Response do
 
       it "should correctly fill the fields" do
         @response = RubyAsterisk::Response.new("ExtensionState",extension_state_response)
-        @response.data[:hints][0]["Status"].should eq("Idle")
+        @response.data[:hints][0]["Status"].should eq("0")
+				@response.data[:hints][0]["DescriptiveStatus"].should eq("Idle")
       end
     end
 	end
