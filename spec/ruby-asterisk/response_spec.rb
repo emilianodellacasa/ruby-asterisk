@@ -76,6 +76,16 @@ describe RubyAsterisk::Response do
 		Talking: Not monitored"
 	end
 
+	def extension_state_response
+		"Response: Success
+		ActionID: 180
+		Message: Extension Status
+		Exten: 9100
+		Context: HINT
+		Hint: SIP/9100
+		Status: 0"
+	end
+
 	describe ".new" do
 		
 		describe "receiving a Core Show Channels request" do
@@ -128,6 +138,18 @@ describe RubyAsterisk::Response do
       it "should correctly fill the fields" do
         @response = RubyAsterisk::Response.new("MeetMeList",meet_me_list_response)
         @response.data[:rooms][0]["Conference"].should eq("1234")
+      end
+    end
+
+		describe "receiving a ExtensionState request" do
+      it "should parse correctly data coming from Asterisk about the state of the extension" do
+        @response = RubyAsterisk::Response.new("ExtensionState",extension_state_response)
+        @response.data[:hints].should_not be_empty
+      end
+
+      it "should correctly fill the fields" do
+        @response = RubyAsterisk::Response.new("ExtensionState",extension_state_response)
+        @response.data[:hints][0]["Status"].should eq("Idle")
       end
     end
 	end

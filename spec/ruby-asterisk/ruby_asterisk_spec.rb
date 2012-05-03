@@ -132,4 +132,11 @@ describe RubyAsterisk do
       @session.meet_me_list.should be_kind_of(RubyAsterisk::Response)
     end
   end
+
+	describe ".extension_state" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.extension_state("9100","HINT").should be_kind_of(RubyAsterisk::Response)
+    end
+  end
 end

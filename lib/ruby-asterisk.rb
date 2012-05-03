@@ -92,6 +92,17 @@ module RubyAsterisk
       Response.new("ParkedCalls",request.response_data)
     end
 
+		def extension_state(exten,context)
+      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context})
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("ExtensionState",request.response_data)
+    end
+
 		def originate(caller,context,callee,priority,variable=nil)
 			request = Request.new("Originate",{"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable  })
 			request.commands.each do |command|

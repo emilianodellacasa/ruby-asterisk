@@ -83,9 +83,13 @@ To get a list of all active conferences use the following command
  @ami.meet_me_list
 ```
 
+### EXTENSION STATE
 
+To get the state of an extension use the following command
 
-
+```ruby
+ @ami.extension_state(@exten,@context)
+```
 
 ### THE RESPONSE OBJECT
 

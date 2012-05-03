@@ -44,6 +44,8 @@ module RubyAsterisk
 					self._parse_originate(response)
 				when "MeetMeList"
           self._parse_meet_me_list(response)
+				when "ExtensionState"
+					self._parse_extension_state(response)
 			end
     end
 
@@ -61,6 +63,33 @@ module RubyAsterisk
 
 		def _parse_data_core_show_channels(response)
 			self._parse_objects(response,:channels,"Event: CoreShowChannel","Event: CoreShowChannelsComplete")
+		end
+
+		def _parse_extension_state(response)
+      _data = self._parse_objects(response,:hints,"Response:")
+			self._convert_status(_data)
+    end
+
+		def _convert_status(_data)
+			_data[:hints].each do |hint|
+				case hint["Status"]
+					when "-1"
+						hint["Status"] = "Extension not found"
+					when "0"
+						hint["Status"] = "Idle"
+					when "1"
+            hint["Status"] = "In Use"
+					when "2"
+            hint["Status"] = "Busy"
+					when "4"
+            hint["Status"] = "Unavailable"
+					when "8"
+            hint["Status"] = "Ringing"
+					when "16"
+            hint["Status"] = "On Hold"
+				end
+			end
+			_data
 		end
 
 		def _parse_objects(response,symbol_name,search_for,stop_with=nil)
