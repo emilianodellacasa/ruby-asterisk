@@ -21,7 +21,11 @@ module RubyAsterisk
 		protected
 
 		def generate_action_id
-			Random.rand(999).to_s
+      if RUBY_VERSION.start_with?("1.9")
+  			Random.rand(999).to_s
+      else
+        rand(999).to_s
+      end
 		end
 
 	end
