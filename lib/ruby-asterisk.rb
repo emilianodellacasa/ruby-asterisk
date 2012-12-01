@@ -108,7 +108,7 @@ module RubyAsterisk
       request.commands.each do |command|
         @session.write(command)
       end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 30) do |data|
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 40) do |data|
         request.response_data << data
       end
       Response.new("Originate",request.response_data)
