@@ -53,7 +53,7 @@ module RubyAsterisk
       request.commands.each do |command|
         @session.write(command)
       end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+      @session.waitfor("String" => "--END COMMAND--\n\n", "Timeout" => 3) do |data|
         request.response_data << data
       end
       Response.new("Command",request.response_data)
