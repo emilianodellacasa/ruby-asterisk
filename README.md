@@ -92,6 +92,19 @@ To get the state of an extension use the following command
 ```ruby
  @ami.extension_state(@exten,@context)
 ```
+### Skinny devices and lines
+
+To get list of skinny devices
+
+```ruby
+ @ami.skinny_devices
+```
+
+To get list of skinny lines
+
+```ruby
+ @ami.skinny_lines
+```
 
 ### THE RESPONSE OBJECT
 

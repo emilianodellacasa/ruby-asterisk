@@ -103,6 +103,28 @@ module RubyAsterisk
       Response.new("ExtensionState",request.response_data)
     end
 
+    def skinny_devices
+      request = Request.new("SKINNYdevices")
+      request.commands.each do |c|
+        @session.write(c)
+      end
+      @session.waitfor("Match" => /ActionID: #{request.action_id}\n\n/, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("SKINNYdevices",request.response_data)
+    end
+    
+    def skinny_lines
+      request = Request.new("SKINNYlines")
+      request.commands.each do |c|
+        @session.write(c)
+      end
+      @session.waitfor("Match" => /ActionID: #{request.action_id}\n\n/, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("SKINNYlines",request.response_data)
+    end
+
     def originate(caller,context,callee,priority,variable=nil)
       request = Request.new("Originate",{"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable  })
       request.commands.each do |command|
