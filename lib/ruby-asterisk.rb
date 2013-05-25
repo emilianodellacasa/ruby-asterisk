@@ -92,8 +92,8 @@ module RubyAsterisk
       Response.new("ParkedCalls",request.response_data)
     end
 
-    def extension_state(exten,context)
-      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context})
+    def extension_state(exten,context,action_id)
+      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context, "ActionID => action_id"})
       request.commands.each do |command|
         @session.write(command)
       end
