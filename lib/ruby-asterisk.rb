@@ -93,7 +93,7 @@ module RubyAsterisk
     end
 
     def extension_state(exten,context,action_id)
-      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context, "ActionID" => "action_id"})
+      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context, "ActionID" => action_id})
       request.commands.each do |command|
         @session.write(command)
       end
