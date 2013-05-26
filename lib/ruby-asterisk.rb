@@ -103,7 +103,7 @@ module RubyAsterisk
       Response.new("ExtensionState",request.response_data)
     end
 
-    def status(channel,action_id=nil)
+    def status(channel=nil,action_id=nil)
       request = Request.new("Status",{"Channel" => channel, "ActionID" => action_id})
       request.commands.each do |command|
         @session.write(command)
