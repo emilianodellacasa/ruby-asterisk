@@ -44,6 +44,8 @@ module RubyAsterisk
           self._parse_originate(response)
         when "MeetMeList"
           self._parse_meet_me_list(response)
+        when "Status"
+          self._parse_status(response)
         when "ExtensionState"
           self._parse_extension_state(response)
       end
@@ -68,6 +70,10 @@ module RubyAsterisk
     def _parse_extension_state(response)
       _data = self._parse_objects(response,:hints,"Response:")
       self._convert_status(_data)
+    end
+
+    def _parse_status(response)
+      self._parse_objects(response, :status, "Event: Status")
     end
 
     def _convert_status(_data)

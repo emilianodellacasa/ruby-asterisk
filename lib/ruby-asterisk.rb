@@ -103,6 +103,17 @@ module RubyAsterisk
       Response.new("ExtensionState",request.response_data)
     end
 
+    def status(channel,action_id=nil)
+      request = Request.new("Status",{"Channel" => channel, "ActionID" => action_id})
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("Status",request.response_data)
+    end
+
     def originate(caller,context,callee,priority,variable=nil)
       request = Request.new("Originate",{"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable  })
       request.commands.each do |command|
