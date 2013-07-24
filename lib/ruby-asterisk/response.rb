@@ -46,6 +46,8 @@ module RubyAsterisk
           self._parse_meet_me_list(response)
         when "ExtensionState"
           self._parse_extension_state(response)
+        when "QueuePause"
+          self._parse_queue_pause(response)
       end
     end
 
@@ -68,6 +70,9 @@ module RubyAsterisk
     def _parse_extension_state(response)
       _data = self._parse_objects(response,:hints,"Response:")
       self._convert_status(_data)
+    end
+    def _parse_queue_pause(response)
+      _data = self._parse_objects(response,:queue_pause,"Response:")
     end
 
     def _convert_status(_data)
