@@ -123,5 +123,6 @@ module RubyAsterisk
         request.response_data << data
       end
       Response.new("QueuePause",request.response_data)
+    end
   end
 end
