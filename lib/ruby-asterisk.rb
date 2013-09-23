@@ -124,5 +124,28 @@ module RubyAsterisk
       end
       Response.new("QueuePause",request.response_data)
     end
+
+    def ping
+      request = Request.new("Ping")
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 60) do |data|
+        request.response_data << data
+      end
+      Response.new("Ping", request.response_data)
+    end
+
+    def event_mask(event_mask="off")
+      request = Request.new("Events", {"EventMask" => event_mask})
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 60) do |data|
+        request.response_data << data
+      end
+      Response.new("Events", request.response_data)
+
+    end
   end
 end
