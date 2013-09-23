@@ -1,7 +1,7 @@
 module RubyAsterisk
   class Response
     attr_accessor :type, :success, :action_id, :message, :data
-    
+
     def initialize(type,response)
       self.type = type
       self.success = self._parse_successfull(response)
@@ -46,7 +46,14 @@ module RubyAsterisk
           self._parse_meet_me_list(response)
         when "ExtensionState"
           self._parse_extension_state(response)
+        when "QueuePause"
+          self._parse_queue_pause(response)
+        when "Pong"
+          self._parse_pong(response)
+        when "Events"
+          self._parse_event_mask(response)
       end
+
     end
 
     def _parse_meet_me_list(response)
@@ -68,6 +75,15 @@ module RubyAsterisk
     def _parse_extension_state(response)
       _data = self._parse_objects(response,:hints,"Response:")
       self._convert_status(_data)
+    end
+    def _parse_queue_pause(response)
+      _data = self._parse_objects(response,:queue_pause,"Response:")
+    end
+    def _parse_pong(response)
+      _data = self._parse_objects(response,:pong, "Response:")
+    end
+    def _parse_event_mask(response)
+      _data = self._parse_objects(response, :event_mask, "Ping:")
     end
 
     def _convert_status(_data)
