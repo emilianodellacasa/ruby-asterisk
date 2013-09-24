@@ -38,80 +38,83 @@ module RubyAsterisk
 
     def login(username,password)
       self.connect unless self.connected
-      request = Request.new("Login",{"Username" => username, "Secret" => password})
-      request.commands.each do |command|
-        @session.write(command)
-      end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
-        request.response_data << data
-      end
-      Response.new("Login",request.response_data)
+      execute "Login", {"Username" => username, "Secret" => password, "Event" => "On"}
     end
 
     def command(command)
-      request = Request.new("Command",{ "Command" => command })
-      request.commands.each do |command|
-        @session.write(command)
-      end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
-        request.response_data << data
-      end
-      Response.new("Command",request.response_data)
+      execute "Command", {"Command" => command}
     end
 
     def core_show_channels
-      request = Request.new("CoreShowChannels")
-      request.commands.each do |command|
-        @session.write(command)
-      end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
-        request.response_data << data
-      end
-      Response.new("CoreShowChannels",request.response_data)
+      execute "CoreShowChannels"
     end
 
     def meet_me_list
-      request = Request.new("MeetMeList")
-      request.commands.each do |command|
-        @session.write(command)
-      end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
-        request.response_data << data
-      end
-      Response.new("MeetMeList",request.response_data)
+      execute "MeetMeList"
     end
 
     def parked_calls
-      request = Request.new("ParkedCalls")
-      request.commands.each do |command|
-        @session.write(command)
-      end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
-        request.response_data << data
-      end
-      Response.new("ParkedCalls",request.response_data)
+      execute "ParkedCalls"
     end
 
     def extension_state(exten,context)
-      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context})
-      request.commands.each do |command|
-        @session.write(command)
-      end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
-        request.response_data << data
-      end
-      Response.new("ExtensionState",request.response_data)
+      execute "ExtensionState", {"Exten" => exten, "Context" => context}
     end
 
     def originate(caller,context,callee,priority,variable=nil)
-      request = Request.new("Originate",{"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable  })
+      execute "Originate", {"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable  }
+    end
+
+    def channels
+      execute "Command", { "Command" => "show channels" }
+    end
+
+    def redirect(caller,context,callee,priority,variable=nil)
+      execute "Redirect", {"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable}
+    end
+
+    def queues
+      execute "Queues", {}
+    end
+
+    def queue_add(queue, exten, penalty=2, paused=false, member_name)
+      execute "QueueAdd", {"Queue" => queue, "Interface" => exten, "Penalty" => penalty, "Paused" => paused, "MemberName" => member_name}
+    end
+
+    def queue_pause(queue, exten)
+      execute "QueuePause", {"Interface" => exten, "Paused" => paused}
+    end
+
+    def queue_remove(queue, exten)
+      execute "QueueRemove", {"Queue" => queue, "Interface" => exten}
+    end
+
+    def queue_status
+      execute "QueueStatus"
+    end
+
+    def queue_summary(queue)
+      execute "QueueSummary", {"Queue" => queue}
+    end
+
+    def mailbox_status(exten, context="default")
+      execute "MailboxStatus", {"Mailbox" => "#{exten}@#{context}"}
+    end
+
+    def mailbox_count(exten, context="default")
+      execute "MailboxCount", {"Mailbox" => "#{exten}@#{context}"}
+    end
+
+    private
+    def execute(command, options={})
+      request = Request.new(command, options)
       request.commands.each do |command|
         @session.write(command)
       end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 40) do |data|
+      @session.waitfor("Match" => /ActionID: #{request.action_id}.*?\n\n/m, "Timeout" => 3) do |data|
         request.response_data << data
       end
-      Response.new("Originate",request.response_data)
+      Response.new(command,request.response_data)
     end
   end
 end
