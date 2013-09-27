@@ -111,7 +111,7 @@ module RubyAsterisk
       request.commands.each do |command|
         @session.write(command)
       end
-      @session.waitfor("Match" => /ActionID: #{request.action_id}.*?\n\n/m, "Timeout" => 3) do |data|
+      @session.waitfor("Match" => /\r\n\r\n/, "Timeout" => 3) do |data|
         request.response_data << data
       end
       Response.new(command,request.response_data)
