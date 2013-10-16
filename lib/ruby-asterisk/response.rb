@@ -46,6 +46,12 @@ module RubyAsterisk
           self._parse_meet_me_list(response)
         when "ExtensionState"
           self._parse_extension_state(response)
+         when "SKINNYdevices"
+          self._parse_skinny_devices(response)
+        when "SKINNYlines"
+          self._parse_skinny_lines(response)
+        when "Command"
+          response
       end
     end
 
@@ -68,6 +74,14 @@ module RubyAsterisk
     def _parse_extension_state(response)
       _data = self._parse_objects(response,:hints,"Response:")
       self._convert_status(_data)
+    end
+    
+    def _parse_skinny_devices(response)
+      self._parse_objects(response,:skinnydevs,"Event: DeviceEntry")
+    end
+
+    def _parse_skinny_lines(response)
+      self._parse_objects(response,:skinnylines,"Event: LineEntry")
     end
 
     def _convert_status(_data)

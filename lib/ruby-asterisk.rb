@@ -53,7 +53,7 @@ module RubyAsterisk
       request.commands.each do |command|
         @session.write(command)
       end
-      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+      @session.waitfor("String" => "--END COMMAND--\n\n", "Timeout" => 3) do |data|
         request.response_data << data
       end
       Response.new("Command",request.response_data)
@@ -101,6 +101,28 @@ module RubyAsterisk
         request.response_data << data
       end
       Response.new("ExtensionState",request.response_data)
+    end
+
+    def skinny_devices
+      request = Request.new("SKINNYdevices")
+      request.commands.each do |c|
+        @session.write(c)
+      end
+      @session.waitfor("Match" => /ActionID: #{request.action_id}\n\n/, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("SKINNYdevices",request.response_data)
+    end
+    
+    def skinny_lines
+      request = Request.new("SKINNYlines")
+      request.commands.each do |c|
+        @session.write(c)
+      end
+      @session.waitfor("Match" => /ActionID: #{request.action_id}\n\n/, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("SKINNYlines",request.response_data)
     end
 
     def originate(caller,context,callee,priority,variable=nil)
