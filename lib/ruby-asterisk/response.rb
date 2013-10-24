@@ -118,7 +118,8 @@ module RubyAsterisk
           object = {}
           parsing = true
         elsif parsing
-          object[line.split(':')[0].strip]=line.split(':')[1].strip unless line.split(':')[1].nil?
+          tokens = line.split(':', 2)
+          object[tokens[0].strip]=tokens[1].strip unless tokens[1].nil?
         end
       end
       _data[symbol_name] << object unless object.nil?
