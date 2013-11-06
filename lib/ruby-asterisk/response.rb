@@ -1,8 +1,10 @@
 module RubyAsterisk
   class Response
-    attr_accessor :type, :success, :action_id, :message, :data
+    attr_accessor :type, :success, :action_id, :message, :data, :response, :request
 
-    def initialize(type,response)
+    def initialize(type,response,request=nil)
+      self.request = request
+      self.response = response
       self.type = type
       self.success = self._parse_successfull(response)
       self.action_id = self._parse_action_id(response)
@@ -13,7 +15,7 @@ module RubyAsterisk
     protected
 
     def _parse_successfull(response)
-      response.include?("Response: Success")
+      response.include?("Response: Success") or (self.type == "Command")
     end
 
     def _parse_action_id(response)
@@ -34,6 +36,24 @@ module RubyAsterisk
       _value
     end
 
+    def _parse_command_data(response)
+      return nil unless self.request
+      case self.request.parameters["Command"]
+      when "sip show peers"
+        self._parse_sip_show_peers(response)
+      else
+        throw new ArgumentError("Command Not Supported")
+      end
+    end
+
+    def _parse_sip_show_peers(response)
+      start = response.index("\nName/username")+1
+      res = response[(start)..(response.size-1)]
+      users = res.split("\n").collect{|line| line.split("\s")}
+
+      users[1..(users.size-3)]
+    end
+
     def _parse_data(response)
       case self.type
         when "CoreShowChannels"
@@ -51,7 +71,13 @@ module RubyAsterisk
         when "SKINNYlines"
           self._parse_skinny_lines(response)
         when "Command"
-          response
+          begin
+            self._parse_command_data(response)
+          rescue ArgumentError
+            nil
+          rescue
+            nil
+          end
         when "QueuePause"
           self._parse_queue_pause(response)
         when "Pong"
