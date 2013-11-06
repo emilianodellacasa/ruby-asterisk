@@ -92,7 +92,7 @@ To get the state of an extension use the following command
 ```ruby
  @ami.extension_state(@exten,@context)
 ```
-### Skinny devices and lines
+### SKINNY DEVICES AND LINES
 
 To get list of skinny devices
 
@@ -104,6 +104,30 @@ To get list of skinny lines
 
 ```ruby
  @ami.skinny_lines
+```
+
+### QUEUE PAUSE
+                                                                                         
+To pause or unpause a member in a call queue
+                                                                                                        
+```ruby
+ @ami.queue_pause("SIP/100", "true", "myqueue", "reason")                                                                            
+```
+
+### PING
+
+To ping asterisk AMI
+
+```ruby
+ @ami.ping
+```
+
+### EVENT MASK                                                            
+
+To enable or disable sending events to this manager connection
+
+```ruby
+ @ami.event_mask("on")
 ```
 
 ### THE RESPONSE OBJECT
