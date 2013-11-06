@@ -74,9 +74,11 @@ module RubyAsterisk
           begin
             self._parse_command_data(response)
           rescue ArgumentError
-            nil
+            # missing command parser
+            response
           rescue
-            nil
+            # just return response for any error for now
+            response
           end
         when "QueuePause"
           self._parse_queue_pause(response)
