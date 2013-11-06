@@ -56,7 +56,7 @@ module RubyAsterisk
       @session.waitfor("String" => "--END COMMAND--\n\n", "Timeout" => 3) do |data|
         request.response_data << data
       end
-      Response.new("Command",request.response_data)
+      Response.new("Command",request.response_data,request)
     end
 
     def core_show_channels

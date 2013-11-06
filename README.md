@@ -52,6 +52,20 @@ To get a list of all channels currently active on your Asterisk installation, us
  @ami.core_show_channels
 ```
 
+### Sip Show Peers
+
+To get a list of sip peers ("sip show peers" call on the asterisk server).  This can be used to get a buddy list. 
+
+```ruby
+peers = @ami.command("sip show peers")
+```
+
+__Example Resultset__
+```bash
+peers.data
+=> [["1001", "(Unspecified)", "D", "0", "UNKNOWN"], ["2030", "(Unspecified)", "D", "0", "UNKNOWN"]]
+```
+
 ### PARKED CALLS
 
 To get a list of all parked calls on your Asterisk PBX, use the following command
