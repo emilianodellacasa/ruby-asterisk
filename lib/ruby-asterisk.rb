@@ -92,8 +92,8 @@ module RubyAsterisk
       Response.new("ParkedCalls",request.response_data)
     end
 
-    def extension_state(exten,context)
-      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context})
+    def extension_state(exten, context, action_id=nil)
+      request = Request.new("ExtensionState",{"Exten" => exten, "Context" => context, "ActionID" => action_id})
       request.commands.each do |command|
         @session.write(command)
       end
@@ -123,6 +123,17 @@ module RubyAsterisk
         request.response_data << data
       end
       Response.new("SKINNYlines",request.response_data)
+    end
+
+    def status(channel=nil,action_id=nil)
+      request = Request.new("Status",{"Channel" => channel, "ActionID" => action_id})
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 3) do |data|
+        request.response_data << data
+      end
+      Response.new("Status",request.response_data)
     end
 
     def originate(caller,context,callee,priority,variable=nil)

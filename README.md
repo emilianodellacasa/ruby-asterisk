@@ -138,6 +138,13 @@ To get a list of sip peers (equivalent to "sip show peers" call on the asterisk 
  @ami.sip_peers
 ```
 
+### STATUS
+                                                                                                                        
+To get a status of a single channel or for all channels                                                                                                                                  
+```ruby
+ @ami.status 
+```
+
 ### THE RESPONSE OBJECT
 
 The response object contains all information about all data received from Asterisk. Here follows a list of all object's properties:
