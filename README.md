@@ -130,6 +130,14 @@ To enable or disable sending events to this manager connection
  @ami.event_mask("on")
 ```
 
+### SIPpeers
+
+To get a list of sip peers (equivalent to "sip show peers" call on the asterisk server).  This can be used to get a buddy list. 
+
+```ruby
+ @ami.sip_peers
+```
+
 ### THE RESPONSE OBJECT
 
 The response object contains all information about all data received from Asterisk. Here follows a list of all object's properties:

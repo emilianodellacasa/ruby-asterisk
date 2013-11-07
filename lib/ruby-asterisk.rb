@@ -169,5 +169,15 @@ module RubyAsterisk
       Response.new("Events", request.response_data)
 
     end
+
+    def sip_peers
+      request = Request.new("SIPpeers")
+      request.commands.each do |command|
+        @session.write(command)
+      end
+      @session.waitfor("String" => "ActionID: "+request.action_id, "Timeout" => 60) do |data|
+        request.response_data << data                                                                                   
+      end
+      Response.new("SIPpeers", request.response_data)                                                                       end
   end
 end

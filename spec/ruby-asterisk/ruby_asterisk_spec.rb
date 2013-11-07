@@ -139,4 +139,12 @@ describe RubyAsterisk do
       @session.extension_state("9100","HINT").should be_kind_of(RubyAsterisk::Response)
     end
   end
+
+  describe ".sip_peers" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.sip_peers.should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
 end

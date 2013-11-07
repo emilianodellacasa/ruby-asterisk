@@ -2,6 +2,16 @@
 require 'spec_helper'
 describe RubyAsterisk::Response do
 
+  def sip_peers_response
+    "Response: Success
+     Message: Peer status list will follow
+     
+     Event: PeerEntry
+     Channeltype: SIP
+     ObjectName: 9915057
+     IPport: 5060"
+  end
+
 	def empty_core_show_channels_response
 		"Event: CoreShowChannelsComplete
 		EventList: Complete
@@ -154,4 +164,17 @@ describe RubyAsterisk::Response do
       end
     end
 	end
+
+  describe "receiving a SIPPeers request" do
+    it "should parse correctly data coming from Asterisk abous sip peers" do
+      @response = RubyAsterisk::Response.new("SIPpeers",sip_peers_response)
+      @response.data[:peers].should_not be_empty
+    end
+    
+    it "should correctly fill the fields" do
+      @response = RubyAsterisk::Response.new("SIPpeers",sip_peers_response)
+      @response.data[:peers][0]["ObjectName"].should eq("9915057")
+      @response.data[:peers][0]["IPport"].should eq("5060")
+    end
+  end
 end

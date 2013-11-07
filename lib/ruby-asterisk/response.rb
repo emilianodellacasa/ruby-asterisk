@@ -17,11 +17,11 @@ module RubyAsterisk
     end
 
     def _parse_action_id(response)
-      _action_id = self._parse(response,"ActionID:")
+      self._parse(response,"ActionID:")
     end
 
     def _parse_message(response)
-      _message = self._parse(response,"Message:")
+      self._parse(response,"Message:")
     end
 
     def _parse(response,field)
@@ -58,8 +58,14 @@ module RubyAsterisk
           self._parse_pong(response)
         when "Events"
           self._parse_event_mask(response)
+        when "SIPpeers"
+          self._parse_sip_peers(response)
       end
 
+    end
+
+    def _parse_sip_peers(response)
+      self._parse_objects(response, :peers, "Event: PeerEntry")
     end
 
     def _parse_meet_me_list(response)
@@ -130,6 +136,7 @@ module RubyAsterisk
       parsing = false
       object = nil
       response.each_line do |line|
+        line.strip!
         if line.strip.empty? or (!stop_with.nil? and line.start_with?(stop_with))
           parsing = false
         elsif line.start_with?(search_for)
