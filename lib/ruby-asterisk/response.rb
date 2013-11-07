@@ -89,6 +89,7 @@ module RubyAsterisk
 
     def _parse_skinny_lines(response)
       self._parse_objects(response,:skinnylines,"Event: LineEntry")
+    end
     
     def _parse_queue_pause(response)
       _data = self._parse_objects(response,:queue_pause,"Response:")
