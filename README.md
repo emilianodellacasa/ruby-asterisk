@@ -147,6 +147,7 @@ The response object contains all information about all data received from Asteri
 - action_id
 - message
 - data
+- raw_response
 
 The data property contains all additional information obtained from Asterisk, like for example the list of active channels after a "core show channels" command.
 

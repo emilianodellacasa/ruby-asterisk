@@ -1,8 +1,9 @@
 module RubyAsterisk
   class Response
-    attr_accessor :type, :success, :action_id, :message, :data
+    attr_accessor :type, :success, :action_id, :message, :data, :raw_response
 
     def initialize(type,response)
+      self.raw_response = response
       self.type = type
       self.success = self._parse_successfull(response)
       self.action_id = self._parse_action_id(response)

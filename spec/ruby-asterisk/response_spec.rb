@@ -137,6 +137,11 @@ describe RubyAsterisk::Response do
         @response = RubyAsterisk::Response.new("Originate",originate_response)
         @response.data[:dial][0]["UniqueID"].should eq("1335457364.68")
       end
+
+      it "should have a field with original raw response" do
+        @response = RubyAsterisk::Response.new("Originate",originate_response)
+        @response.raw_response.should eq(originate_response)
+      end
     end
 		
 		describe "receiving a MeetMeList request" do
