@@ -2,6 +2,8 @@
 
 [![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/emilianodellacasa/ruby-asterisk)
 
+[![Build Status](https://secure.travis-ci.org/emilianodellacasa/ruby-asterisk.png)](https://secure.travis-ci.org/emilianodellacasa/ruby-asterisk.png)
+
 This gem add support to your Ruby or RubyOnRails projects to Asterisk Manager Interface
 
 There was a project with the same name, but it appears to be discontinued so I decided to start a new project
