@@ -89,7 +89,7 @@ module RubyAsterisk
       execute "Queues", {}
     end
 
-    def queue_add(queue, exten, penalty=2, paused=false, member_name)
+    def queue_add(queue, exten, penalty = 2, paused = false, member_name = '')
       execute "QueueAdd", {"Queue" => queue, "Interface" => exten, "Penalty" => penalty, "Paused" => paused, "MemberName" => member_name}
     end
 
