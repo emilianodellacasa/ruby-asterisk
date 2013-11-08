@@ -3,3 +3,5 @@
 Gemfile.lock
 pkg/*
 coverage/*
+.cane
+*_high_water_mark
