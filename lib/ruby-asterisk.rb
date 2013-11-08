@@ -27,7 +27,6 @@ module RubyAsterisk
     def disconnect
       begin
         @session.close if self.connected
-        @session = nil
         self.connected = false
         true
       rescue Exception => ex
