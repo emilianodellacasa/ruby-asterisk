@@ -160,6 +160,13 @@ The response object contains all information about all data received from Asteri
 
 The data property contains all additional information obtained from Asterisk, like for example the list of active channels after a "core show channels" command.
 
+## Todo List
+
+- Adding initialization parameters for Telnet options like Output_log, Waittime, Dump_log, timeout;
+- Checking code coverage and adding test cases;
+- Refactoring response.rb;
+
+
 ## Development
 
 Questions or problems? Please post them on the [issue tracker](https://github.com/emilianodellacasa/ruby-asterisk/issues). You can contribute changes by forking the project and submitting a pull request. You can ensure the tests passing by running `bundle` and `rake`.
