@@ -5,7 +5,7 @@ describe RubyAsterisk::Response do
   def sip_peers_response
     "Response: Success
      Message: Peer status list will follow
-     
+
      Event: PeerEntry
      Channeltype: SIP
      ObjectName: 9915057
@@ -97,9 +97,9 @@ describe RubyAsterisk::Response do
   end
 
   describe ".new" do
-    
+
     describe "receiving a Core Show Channels request" do
-      it "should parse correctly data coming from Asterisk about channels" do 
+      it "should parse correctly data coming from Asterisk about channels" do
         @response = RubyAsterisk::Response.new("CoreShowChannels",core_show_channels_response)
         @response.data[:channels].should_not be_empty
       end
@@ -114,7 +114,7 @@ describe RubyAsterisk::Response do
         @response.data[:channels].count.should eq(0)
       end
     end
-  
+
     describe "receiving a Parked Calls request" do
       it "should parse correctly data coming from Asterisk about calls" do
         @response = RubyAsterisk::Response.new("ParkedCalls",parked_calls_response)
@@ -127,7 +127,7 @@ describe RubyAsterisk::Response do
       end
     end
 
-    describe "receiving a Originate request" do 
+    describe "receiving a Originate request" do
       it "should parse correctly data coming from Asterisk about the call" do
         @response = RubyAsterisk::Response.new("Originate",originate_response)
         @response.data[:dial].should_not be_empty
@@ -143,7 +143,7 @@ describe RubyAsterisk::Response do
         @response.raw_response.should eq(originate_response)
       end
     end
-    
+
     describe "receiving a MeetMeList request" do
       it "should parse correctly data coming from Asterisk about the conference room" do
         @response = RubyAsterisk::Response.new("MeetMeList",meet_me_list_response)
@@ -175,7 +175,7 @@ describe RubyAsterisk::Response do
       @response = RubyAsterisk::Response.new("SIPpeers",sip_peers_response)
       @response.data[:peers].should_not be_empty
     end
-    
+
     it "should correctly fill the fields" do
       @response = RubyAsterisk::Response.new("SIPpeers",sip_peers_response)
       @response.data[:peers][0]["ObjectName"].should eq("9915057")

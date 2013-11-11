@@ -162,8 +162,7 @@ The data property contains all additional information obtained from Asterisk, li
 
 - Adding initialization parameters for Telnet options like Output_log, Waittime, Dump_log, timeout;
 - Adding test cases for better code coverage;
-- Refactoring response.rb;
-
+- Refactoring of ruby-asterisk.rb, adding method_missing for the purpose of supporting as much AMI commands as possible
 
 ## Development
 

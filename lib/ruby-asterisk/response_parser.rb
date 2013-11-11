@@ -27,10 +27,9 @@ module RubyAsterisk
     def self._parse_objects(response, parse_params)
       object_array = []
       object_regex = Regexp.new(/#{parse_params[:search_for]}\n(.*)\n\n/m)
-      object_regex.match(response) do |m|
+      object_regex.match(response) do |match|
         object = {}
-        lines = m[0].split(/\n/)
-        lines.each do |line|
+        match[0].split(/\n/).each do |line|
           tokens = line.split(':', 2)
           object[tokens[0].strip]=tokens[1].strip unless tokens[1].nil?
         end

@@ -1,14 +1,17 @@
-require "ruby-asterisk/version"
-require "ruby-asterisk/request"
-require "ruby-asterisk/response"
-
+require 'ruby-asterisk/version'
+require 'ruby-asterisk/request'
+require 'ruby-asterisk/response'
 require 'net/telnet'
 
 module RubyAsterisk
+  ##
+  #
+  # Ruby-asterisk main classes
+  #
   class AMI
     attr_accessor :host, :port, :connected
 
-    def initialize(host,port)
+    def initialize(host, port)
       self.host = host.to_s
       self.port = port.to_i
       self.connected = false
@@ -17,7 +20,7 @@ module RubyAsterisk
 
     def connect
       begin
-        @session = Net::Telnet::new("Host" => self.host,"Port" => self.port)
+        @session = Net::Telnet::new('Host' => self.host, 'Port' => self.port, 'Timeout' => 10)
         self.connected = true
       rescue Exception => ex
         false
@@ -35,113 +38,113 @@ module RubyAsterisk
       end
     end
 
-    def login(username,password)
+    def login(username, password)
       self.connect unless self.connected
-      execute "Login", {"Username" => username, "Secret" => password, "Event" => "On"}
+      execute 'Login', {'Username' => username, 'Secret' => password, 'Event' => 'On'}
     end
 
     def command(command)
-      execute "Command", {"Command" => command}
+      execute 'Command', {'Command' => command}
     end
 
     def core_show_channels
-      execute "CoreShowChannels"
+      execute 'CoreShowChannels'
     end
 
     def meet_me_list
-      execute "MeetMeList"
+      execute 'MeetMeList'
     end
 
     def parked_calls
-      execute "ParkedCalls"
+      execute 'ParkedCalls'
     end
 
-    def extension_state(exten, context, action_id=nil)
-      execute "ExtensionState", {"Exten" => exten, "Context" => context, "ActionID" => action_id}
+    def extension_state(exten, context, action_id = nil)
+      execute 'ExtensionState', {'Exten' => exten, 'Context' => context, 'ActionID' => action_id}
     end
 
     def skinny_devices
-      execute "SKINNYdevices"
+      execute 'SKINNYdevices'
     end
 
     def skinny_lines
-      execute "SKINNYlines"
+      execute 'SKINNYlines'
     end
 
-    def status(channel=nil,action_id=nil)
-      execute "Status", {"Channel" => channel, "ActionID" => action_id}
+    def status(channel = nil, action_id = nil)
+      execute 'Status', {'Channel' => channel, 'ActionID' => action_id}
     end
 
-    def originate(caller,context,callee,priority,variable=nil)
-      execute "Originate", {"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable  }
+    def originate(caller, context, callee, priority, variable = nil)
+      execute 'Originate', {'Channel' => caller, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller, 'Timeout' => '30000', 'Variable' => variable  }
     end
 
     def channels
-      execute "Command", { "Command" => "show channels" }
+      execute 'Command', { 'Command' => 'show channels' }
     end
 
     def redirect(caller,context,callee,priority,variable=nil)
-      execute "Redirect", {"Channel" => caller, "Context" => context, "Exten" => callee, "Priority" => priority, "Callerid" => caller, "Timeout" => "30000", "Variable" => variable}
+      execute 'Redirect', {'Channel' => caller, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller, 'Timeout' => '30000', 'Variable' => variable}
     end
 
     def queues
-      execute "Queues", {}
+      execute 'Queues', {}
     end
 
     def queue_add(queue, exten, penalty = 2, paused = false, member_name = '')
-      execute "QueueAdd", {"Queue" => queue, "Interface" => exten, "Penalty" => penalty, "Paused" => paused, "MemberName" => member_name}
+      execute 'QueueAdd', {'Queue' => queue, 'Interface' => exten, 'Penalty' => penalty, 'Paused' => paused, 'MemberName' => member_name}
     end
 
     def queue_pause(exten, paused)
-      execute "QueuePause", {"Interface" => exten, "Paused" => paused}
+      execute 'QueuePause', {'Interface' => exten, 'Paused' => paused}
     end
 
     def queue_remove(queue, exten)
-      execute "QueueRemove", {"Queue" => queue, "Interface" => exten}
+      execute 'QueueRemove', {'Queue' => queue, 'Interface' => exten}
     end
 
     def queue_status
-      execute "QueueStatus"
+      execute 'QueueStatus'
     end
 
     def queue_summary(queue)
-      execute "QueueSummary", {"Queue" => queue}
+      execute 'QueueSummary', {'Queue' => queue}
     end
 
-    def mailbox_status(exten, context="default")
-      execute "MailboxStatus", {"Mailbox" => "#{exten}@#{context}"}
+    def mailbox_status(exten, context='default')
+      execute 'MailboxStatus', {'Mailbox' => "#{exten}@#{context}"}
     end
 
-    def mailbox_count(exten, context="default")
-      execute "MailboxCount", {"Mailbox" => "#{exten}@#{context}"}
+    def mailbox_count(exten, context='default')
+      execute 'MailboxCount', {'Mailbox' => "#{exten}@#{context}"}
     end
 
     def queue_pause(interface,paused,queue,reason='none')
-      execute "QueuePause", {"Interface" => interface, "Paused" => paused, "Queue" => queue, "Reason" => reason}
+      execute 'QueuePause', {'Interface' => interface, 'Paused' => paused, 'Queue' => queue, 'Reason' => reason}
     end
 
     def ping
-      execute "Ping"
+      execute 'Ping'
     end
 
-    def event_mask(event_mask="off")
-      execute "Events", {"EventMask" => event_mask}
+    def event_mask(event_mask='off')
+      execute 'Events', {'EventMask' => event_mask}
     end
 
     def sip_peers
-      execute "SIPpeers"
+      execute 'SIPpeers'
     end
 
     private
-    def execute(command, options={})
+    def execute(command, options = {})
       request = Request.new(command, options)
       request.commands.each do |command|
         @session.write(command)
       end
-      @session.waitfor("Match" => /ActionID: #{request.action_id}.*?\n\n/m, "Timeout" => 10) do |data|
+      @session.waitfor('Match' => /ActionID: #{request.action_id}.*?\n\n/m) do |data|
         request.response_data << data
       end
-      Response.new(command,request.response_data)
+      Response.new(command, request.response_data)
     end
   end
 end
