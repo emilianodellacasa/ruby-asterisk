@@ -11,7 +11,7 @@ module RubyAsterisk
       if PARSE_DATA.include?(type)
         self._parse_objects(raw_response, PARSE_DATA[type])
       else
-        self.raw_response
+        raw_response
       end
     end
 
