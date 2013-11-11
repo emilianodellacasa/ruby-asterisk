@@ -63,7 +63,7 @@ module RubyAsterisk
     def skinny_devices
       execute "SKINNYdevices"
     end
-    
+
     def skinny_lines
       execute "SKINNYlines"
     end
