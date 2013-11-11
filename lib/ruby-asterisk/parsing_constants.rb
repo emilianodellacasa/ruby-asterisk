@@ -41,7 +41,7 @@ module RubyAsterisk
     },
     'ExtensionState'  => {
       :symbol => :hints,
-      :search_for => 'Response:',
+      :search_for => 'Response: Success',
       :stop_with => nil
     },
     'SKINNYdevices'  => {

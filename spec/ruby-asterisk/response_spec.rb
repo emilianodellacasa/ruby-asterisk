@@ -9,14 +9,14 @@ describe RubyAsterisk::Response do
      Event: PeerEntry
      Channeltype: SIP
      ObjectName: 9915057
-     IPport: 5060"
+     IPport: 5060\n\n"
   end
 
   def empty_core_show_channels_response
     "Event: CoreShowChannelsComplete
     EventList: Complete
     ListItems: 1
-    ActionID: 839"
+    ActionID: 839\n\n"
   end
 
   def core_show_channels_response
@@ -43,7 +43,7 @@ describe RubyAsterisk::Response do
     Event: CoreShowChannelsComplete
     EventList: Complete
     ListItems: 1
-    ActionID: 839"
+    ActionID: 839\n\n"
   end
 
   def parked_calls_response
@@ -57,7 +57,7 @@ describe RubyAsterisk::Response do
     CallerIDName:
     ConnectedLineNum:
     ConnectedLineName:
-    ActionID: 899"
+    ActionID: 899\n\n"
   end
 
   def originate_response
@@ -66,7 +66,7 @@ describe RubyAsterisk::Response do
     SubEvent: End
     Channel: SIP/9100-0000002b
     UniqueID: 1335457364.68
-    DialStatus: CHANUNAVAIL"
+    DialStatus: CHANUNAVAIL\n\n"
   end
 
   def meet_me_list_response
@@ -83,7 +83,7 @@ describe RubyAsterisk::Response do
     Role: Talk and listen
     MarkedUser: No
     Muted: No
-    Talking: Not monitored"
+    Talking: Not monitored\n\n"
   end
 
   def extension_state_response
@@ -93,7 +93,7 @@ describe RubyAsterisk::Response do
     Exten: 9100
     Context: HINT
     Hint: SIP/9100
-    Status: 0"
+    Status: 0\n\n"
   end
 
   describe ".new" do

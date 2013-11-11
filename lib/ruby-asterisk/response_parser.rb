@@ -17,33 +17,27 @@ module RubyAsterisk
 
     protected
 
-    def self._convert_status(_data)
-      _data[:hints].each do |hint|
+    def self._add_status(exten_array)
+      exten_array.each do |hint|
         hint["DescriptiveStatus"] = DESCRIPTIVE_STATUS[hint["Status"]]
       end
-      _data
+      exten_array
     end
 
     def self._parse_objects(response, parse_params)
-       _data = { parse_params[:symbol] => [] }
-      parsing = false
-      object = nil
-      response.each_line do |line|
-        line.strip!
-        if line.strip.empty? or (!parse_params[:stop_with].nil? and line.start_with?(parse_params[:stop_with]))
-          parsing = false
-        elsif line.start_with?(parse_params[:search_for])
-          _data[parse_params[:symbol]] << object unless object.nil?
-          object = {}
-          parsing = true
-        elsif parsing
+      object_array = []
+      object_regex = Regexp.new(/#{parse_params[:search_for]}\n(.*)\n\n/m)
+      object_regex.match(response) do |m|
+        object = {}
+        lines = m[0].split(/\n/)
+        lines.each do |line|
           tokens = line.split(':', 2)
           object[tokens[0].strip]=tokens[1].strip unless tokens[1].nil?
         end
+        object_array << object unless object.empty?
       end
-      _data[parse_params[:symbol]] << object unless object.nil?
-      _data = _convert_status(_data) if _data.include?(:hints)
-      _data
+      object_array = _add_status(object_array) if parse_params[:symbol].eql?(:hints)
+      { parse_params[:symbol] => object_array }
     end
   end
 end
