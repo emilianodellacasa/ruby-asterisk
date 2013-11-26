@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = Rami::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Emiliano Della Casa"]
-  s.email       = ["e.dellacasa@engim.eu"]
+  s.email       = ["emiliano.dellacasa@gmail.com"]
   s.homepage    = "http://github.com/emilianodellacasa/ruby-asterisk"
   s.summary     = %q{Asterisk Manager Interface in Ruby}
   s.description = %q{Add support to your ruby or rails projects to Asterisk Manager Interface (AMI)}
