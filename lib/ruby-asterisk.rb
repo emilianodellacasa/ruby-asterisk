@@ -142,7 +142,7 @@ module RubyAsterisk
         @session.write(command)
       end
       @session.waitfor('Match' => /ActionID: #{request.action_id}.*?\n\n/m) do |data|
-        request.response_data << data
+        request.response_data << data.to_s
       end
       Response.new(command, request.response_data)
     end
