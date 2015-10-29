@@ -9,12 +9,14 @@ module RubyAsterisk
   # Ruby-asterisk main classes
   #
   class AMI
-    attr_accessor :host, :port, :connected
+    attr_accessor :host, :port, :connected, :timeout, :wait_time
 
     def initialize(host, port)
       self.host = host.to_s
       self.port = port.to_i
       self.connected = false
+      @timeout = 5
+      @wait_time = 0.1
       @session = nil
     end
 
@@ -141,7 +143,7 @@ module RubyAsterisk
       request.commands.each do |command|
         @session.write(command)
       end
-      @session.waitfor('Match' => /ActionID: #{request.action_id}.*?\n\n/m) do |data|
+      @session.waitfor('Match' => /ActionID: #{request.action_id}.*?\n\n/m, "Timeout" => @timeout, "Waittime" => @wait_time) do |data|
         request.response_data << data.to_s
       end
       Response.new(command, request.response_data)
