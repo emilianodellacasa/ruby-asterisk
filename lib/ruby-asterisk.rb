@@ -45,6 +45,10 @@ module RubyAsterisk
       execute 'Login', {'Username' => username, 'Secret' => password, 'Event' => 'On'}
     end
 
+    def logoff
+      execute 'Logoff'
+    end
+
     def command(command)
       execute 'Command', {'Command' => command}
     end
