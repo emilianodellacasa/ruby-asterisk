@@ -81,16 +81,16 @@ module RubyAsterisk
       execute 'Status', {'Channel' => channel, 'ActionID' => action_id}
     end
 
-    def originate(caller, context, callee, priority, variable = nil)
-      execute 'Originate', {'Channel' => caller, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller, 'Timeout' => '30000', 'Variable' => variable  }
+    def originate(channel, context, callee, priority, variable = nil, caller_id = nil, timeout = 30000)
+      execute 'Originate', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable  }
     end
 
     def channels
       execute 'Command', { 'Command' => 'show channels' }
     end
 
-    def redirect(caller,context,callee,priority,variable=nil)
-      execute 'Redirect', {'Channel' => caller, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller, 'Timeout' => '30000', 'Variable' => variable}
+    def redirect(channel, context, callee, priority, variable=nil, caller_id = nil, timeout = 30000)
+      execute 'Redirect', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable}
     end
 
     def queues
