@@ -83,7 +83,7 @@ module RubyAsterisk
 
     def originate(channel, context, callee, priority, variable = nil, caller_id = nil, timeout = 30000)
       @timeout = [@timeout, timeout/1000].max
-      execute 'Originate', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable  }
+      execute 'Originate', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable  }
     end
 
     def channels
@@ -92,7 +92,7 @@ module RubyAsterisk
 
     def redirect(channel, context, callee, priority, variable=nil, caller_id = nil, timeout = 30000)
       @timeout = [@timeout, timeout/1000].max
-      execute 'Redirect', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable}
+      execute 'Redirect', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable}
     end
 
     def queues
