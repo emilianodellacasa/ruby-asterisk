@@ -81,8 +81,9 @@ module RubyAsterisk
       execute 'Status', {'Channel' => channel, 'ActionID' => action_id}
     end
 
-    def originate(caller, context, callee, priority, variable = nil)
-      execute 'Originate', {'Channel' => caller, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller, 'Timeout' => '30000', 'Variable' => variable  }
+    def originate(channel, context, callee, priority, variable = nil, caller_id = nil, timeout = 30000)
+      @timeout = [@timeout, timeout/1000].max
+      execute 'Originate', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable  }
     end
 
     def originate_app(caller, app, data, async)
@@ -93,8 +94,9 @@ module RubyAsterisk
       execute 'Command', { 'Command' => 'show channels' }
     end
 
-    def redirect(caller,context,callee,priority,variable=nil)
-      execute 'Redirect', {'Channel' => caller, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller, 'Timeout' => '30000', 'Variable' => variable}
+    def redirect(channel, context, callee, priority, variable=nil, caller_id = nil, timeout = 30000)
+      @timeout = [@timeout, timeout/1000].max
+      execute 'Redirect', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable}
     end
 
     def queues

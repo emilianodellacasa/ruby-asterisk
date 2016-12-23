@@ -25,11 +25,7 @@ module RubyAsterisk
     protected
 
     def self.generate_action_id
-      if RUBY_VERSION.start_with?('1.9')
-        Random.rand(999).to_s
-      else
-        rand(999).to_s
-      end
+      Process.clock_gettime(Process::CLOCK_REALTIME, :nanosecond).to_s(36)
     end
   end
 end
