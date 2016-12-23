@@ -85,6 +85,10 @@ module RubyAsterisk
       execute 'Originate', {'Channel' => caller, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'Callerid' => caller, 'Timeout' => '30000', 'Variable' => variable  }
     end
 
+    def originate_app(caller, app, data, async)
+      execute 'Originate', {'Channel' => caller, 'Application' => app, 'Data' => data, 'Timeout' => '30000', 'Async' => async }
+    end
+
     def channels
       execute 'Command', { 'Command' => 'show channels' }
     end
