@@ -61,7 +61,6 @@ module RubyAsterisk
       execute 'MeetMeList'
     end
 
-    ## methods for testing
     def confbridges
       execute 'ConfbridgeListRooms'
     end
@@ -81,7 +80,6 @@ module RubyAsterisk
     def confbridge_kick(conference, channel)
       execute 'ConfbridgeKick', {'Conference' => conference, 'Channel' => channel}
     end
-    ##
 
     def parked_calls
       execute 'ParkedCalls'
