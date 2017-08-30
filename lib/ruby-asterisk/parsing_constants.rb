@@ -34,6 +34,16 @@ module RubyAsterisk
       :search_for => 'Event: MeetmeList',
       :stop_with => nil
     },
+    'ConfbridgeListRooms'  => {
+      :symbol => :rooms,
+      :search_for => 'Event: ConfbridgeListRooms',
+      :stop_with => nil
+    },
+    'ConfbridgeList'  => {
+      :symbol => :channels,
+      :search_for => 'Event: ConfbridgeList',
+      :stop_with => nil
+    },
     'Status'  => {
       :symbol => :status,
       :search_for => 'Event: Status',
