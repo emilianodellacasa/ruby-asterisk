@@ -16,7 +16,7 @@ module RubyAsterisk
     def commands
       _commands = ["Action: #{self.action}\r\n", "ActionID: #{self.action_id}\r\n"]
       self.parameters.each do |key, value|
-        _commands << key + ": #{value}\r\n" unless value.nil?
+        _commands<<"#{key.to_s}: #{value.to_s}\r\n" unless value.nil?
       end
       _commands[_commands.length - 1] << "\r\n"
       _commands
