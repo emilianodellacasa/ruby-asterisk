@@ -167,6 +167,10 @@ module RubyAsterisk
       execute 'SIPpeers'
     end
 
+    def get_config(filename)
+      execute 'GetConfig', {'Filename' => filename}
+    end
+
     private
     def execute(command, options = {})
       request = Request.new(command, options)
