@@ -171,16 +171,26 @@ module RubyAsterisk
       execute 'GetConfig', {'Filename' => filename}
     end
 
-    def update_config(srcfilename: nil, dstfilename: nil, action_num: nil, action_value: nil, cat_action_num: nil, cat_action_value: nil, var_action_num: nil, var_action_value: nil, value_action_num: nil, value_action_value: nil, match_num: nil, match_value: nil,  reload: 'true')
-      execute 'UpdateConfig', {  "srcfilename" => srcfilename,
-                                "dstfilename" => dstfilename,
-                                "reload" => reload,
-                                "Action-#{action_num}" => action_value,
-                                "Cat-#{cat_action_num}" => cat_action_value,
-                                "Var-#{var_action_num}" => var_action_value,
-                                "Value-#{value_action_num}" => value_action_value,
-                                "Match-#{match_num}" => match_value
-                              }
+    def update_config(srcfilename: nil, dstfilename: nil, action_num: *args, action_value: *args, cat_action_num: *args, cat_action_value: *args, var_action_num: *args, var_action_value: *args, value_action_num: *args, value_action_value: *args, match_num: *args, match_value: *args,  reload: 'true')
+      queny = { "srcfilename" => srcfilename, "dstfilename" => dstfilename, "reload" => reload }
+      params =  action_num.each_with_index do |a_num, index|
+                  if cat_action_value[index] == 'newcat'
+                    action_hash = {"Action-#{a_num}" => action_value[index]}
+                    cat_hash = {"Cat-#{cat_action_num[index]}" => cat_action_value[index]}
+                    match_hash = {"Match-#{match_num[index]}" => match_value[index]}
+                    newcat = action_hash.merge(cat_hash).merge(match_hash)
+                  elsif cat_action_value[index] == 'append'
+                    action_hash = {"Action-#{a_num}" => action_value[index]}
+                    cat_hash = {"Cat-#{cat_action_num[index]}" => cat_action_value[index]}
+                    var_hash = {"Var-#{var_action_num[index]}" => var_action_value[index]}
+                    value_hash = {"Value-#{value_action_num[index]}" => value_action_value[index]}
+                    match_hash = {"Match-#{match_num[index]}" => match_value[index]}
+                    append = action_hash.merge(cat_hash).merge(var_hash).merge(value_hash).merge(match_hash)
+                  end
+                  newcat.merge(append)
+                end
+
+      execute 'UpdateConfig', queny.merge(params)
     end
 
     private
