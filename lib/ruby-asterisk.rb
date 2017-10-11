@@ -172,20 +172,20 @@ module RubyAsterisk
     end
 
     # action_num: *args1, action_value: *args12, cat_action_num: *args2, cat_action_value: *args21, var_action_num: *args3, var_action_value: *args31, value_action_num: *args4, value_action_value: *args41, match_num: *args5, match_value: *args51
-    def update_config(*args1, *args12, *args2, *args21, *args3, *args31, *args4, *args41, *args5, *args51, reload: 'true', srcfilename:, dstfilename:)
+    def update_config( *action_num, *action_value, *cat_action_num, *cat_action_value, *var_action_num, *var_action_value, *value_action_num, *value_action_value, *match_num, *match_value,  reload: 'true', srcfilename:, dstfilename:)
       queny = { "srcfilename" => srcfilename, "dstfilename" => dstfilename, "reload" => reload }
-      params =  args1.each_with_index do |a_num, index|
-                  if args21[index] == 'newcat'
-                    action_hash = {"Action-#{a_num}" => args12[index]}
-                    cat_hash = {"Cat-#{args2[index]}" => args21[index]}
-                    match_hash = {"Match-#{args5[index]}" => args51[index]}
+      params =  action_num.each_with_index do |a_num, index|
+                  if cat_action_value[index] == 'newcat'
+                    action_hash = {"Action-#{a_num}" => action_value[index]}
+                    cat_hash = {"Cat-#{cat_action_num[index]}" => cat_action_value[index]}
+                    match_hash = {"Match-#{match_num[index]}" => match_value[index]}
                     newcat = action_hash.merge(cat_hash).merge(match_hash)
-                  elsif args21[index] == 'append'
-                    action_hash = {"Action-#{a_num}" => args12[index]}
-                    cat_hash = {"Cat-#{args2[index]}" => args21[index]}
-                    var_hash = {"Var-#{args3[index]}" => args31[index]}
-                    value_hash = {"Value-#{args4[index]}" => args41[index]}
-                    match_hash = {"Match-#{args5[index]}" => args51[index]}
+                  elsif cat_action_value[index] == 'append'
+                    action_hash = {"Action-#{a_num}" => action_value[index]}
+                    cat_hash = {"Cat-#{cat_action_num[index]}" => cat_action_value[index]}
+                    var_hash = {"Var-#{var_action_num[index]}" => var_action_value[index]}
+                    value_hash = {"Value-#{value_action_num[index]}" => value_action_value[index]}
+                    match_hash = {"Match-#{match_num[index]}" => match_value[index]}
                     append = action_hash.merge(cat_hash).merge(var_hash).merge(value_hash).merge(match_hash)
                   end
                   newcat.merge(append)
