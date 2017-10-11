@@ -172,7 +172,7 @@ module RubyAsterisk
     end
 
     # action_num: *args1, action_value: *args12, cat_action_num: *args2, cat_action_value: *args21, var_action_num: *args3, var_action_value: *args31, value_action_num: *args4, value_action_value: *args41, match_num: *args5, match_value: *args51
-    def update_config(srcfilename: nil, dstfilename: nil, *args1, *args12, *args2, *args21, *args3, *args31, *args4, *args41, *args5, *args51,  reload: 'true')
+    def update_config(*args1, *args12, *args2, *args21, *args3, *args31, *args4, *args41, *args5, *args51,  reload: 'true', srcfilename: nil, dstfilename: nil)
       queny = { "srcfilename" => srcfilename, "dstfilename" => dstfilename, "reload" => reload }
       params =  args1.each_with_index do |a_num, index|
                   if args21[index] == 'newcat'
