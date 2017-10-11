@@ -171,7 +171,7 @@ module RubyAsterisk
       execute 'GetConfig', {'Filename' => filename}
     end
 
-    def update_config(srcfilename, dstfilename, reload, action_num, action_value, cat_action_num, cat_action_value, var_action_num, var_action_value, value_action_num, value_action_value, match)
+    def update_config(srcfilename: nil, dstfilename: nil, reload = 'true', action_num: nil, action_value: nil, cat_action_num: nil, cat_action_value: nil, var_action_num: nil, var_action_value: nil, value_action_num: nil, value_action_value: nil, match_num: nil, match_value: nil)
       execute 'UpdateConfig', {  "srcfilename" => srcfilename,
                                 "dstfilename" => dstfilename,
                                 "reload" => reload,
@@ -179,7 +179,7 @@ module RubyAsterisk
                                 "Cat-#{cat_action_num}" => cat_action_value,
                                 "Var-#{var_action_num}" => var_action_value,
                                 "Value-#{value_action_num}" => value_action_value,
-                                "Match-000000" => match
+                                "Match-#{match_num}" => match_value
                               }
     end
 
