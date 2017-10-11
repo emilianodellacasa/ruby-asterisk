@@ -167,6 +167,34 @@ module RubyAsterisk
       execute 'SIPpeers'
     end
 
+    def get_config(filename)
+      execute 'GetConfig', {'Filename' => filename}
+    end
+
+    # action_num: *args1, action_value: *args12, cat_action_num: *args2, cat_action_value: *args21, var_action_num: *args3, var_action_value: *args31, value_action_num: *args4, value_action_value: *args41, match_num: *args5, match_value: *args51
+      def update_config( action_num:, action_value:, cat_action_num:, cat_action_value:, var_action_num:, var_action_value:, value_action_num:, value_action_value:, match_num:, match_value:,  reload: 'true', srcfilename:, dstfilename:)
+        queny = { "srcfilename" => srcfilename, "dstfilename" => dstfilename, "reload" => reload }
+        number = action_num.to_i
+        params =  action_num.split(",").each_with_index do |a_num, index|
+                    if cat_action_value.split(",")[index] == 'newcat'
+                      action_hash = {"Action-#{a_num}" => action_value.split(",")[index]}
+                      cat_hash = {"Cat-#{cat_action_num.split(",")[index]}" => cat_action_value.split(",")[index]}
+                      match_hash = {"Match-#{match_num.split(",")[index]}" => match_value.split(",")[index]}
+                      newcat = action_hash.merge(cat_hash).merge(match_hash)
+                    elsif cat_action_value.split(",")[index] == 'append'
+                      action_hash = {"Action-#{a_num}" => action_value.split(",")[index]}
+                      cat_hash = {"Cat-#{cat_action_num.split(",")[index]}" => cat_action_value.split(",")[index]}
+                      var_hash = {"Var-#{var_action_num.split(",")[index]}" => var_action_value.split(",")[index]}
+                      value_hash = {"Value-#{value_action_num.split(",")[index]}" => value_action_value.split(",")[index]}
+                      match_hash = {"Match-#{match_num.split(",")[index]}" => match_value.split(",")[index]}
+                      append = action_hash.merge(cat_hash).merge(var_hash).merge(value_hash).merge(match_hash)
+                    end
+                    newcat.merge(append)
+                  end
+
+        execute 'UpdateConfig', queny.merge(params)
+      end
+
     private
     def execute(command, options = {})
       request = Request.new(command, options)
