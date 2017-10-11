@@ -172,7 +172,7 @@ module RubyAsterisk
     end
 
     def update_config(srcfilename, dstfilename, reload, action_num, action_value, cat_action_num, cat_action_value, var_action_num, var_action_value, value_action_num, value_action_value, match)
-      execute 'UpdateConfig' {  "srcfilename" => srcfilename,
+      execute 'UpdateConfig', {  "srcfilename" => srcfilename,
                                 "dstfilename" => dstfilename,
                                 "reload" => reload,
                                 "Action-#{action_num}" => action_value,
