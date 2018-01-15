@@ -166,6 +166,10 @@ module RubyAsterisk
     def sip_peers
       execute 'SIPpeers'
     end
+    
+    def hangup(channel)
+      execute 'Hangup', {'Channel' => channel}
+    end
 
     private
     def execute(command, options = {})
