@@ -171,6 +171,10 @@ module RubyAsterisk
       execute 'Hangup', {'Channel' => channel}
     end
 
+    def atxfer(channel, exten, context, priority = '1')
+      execute 'Atxfer', {'Channel' => channel, 'Exten' => exten.to_s, 'Context' => context, 'Priority' => priority}
+    end
+
     private
     def execute(command, options = {})
       request = Request.new(command, options)

@@ -145,6 +145,14 @@ To get a status of a single channel or for all channels
  @ami.status 
 ```
 
+### ATXFER
+
+Attendand transfer
+
+```ruby
+ @ami.atxfer(channel, exten, context, priority = '1')
+```
+
 ### THE RESPONSE OBJECT
 
 The response object contains all information about all data received from Asterisk. Here follows a list of all object's properties:
