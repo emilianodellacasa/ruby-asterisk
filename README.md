@@ -3,6 +3,7 @@
 [![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/emilianodellacasa/ruby-asterisk)
 [![Donate via Zerocracy](https://www.0crat.com/contrib-badge/CE8UGB6NP.svg)](https://www.0crat.com/contrib/CE8UGB6NP)
 [![Managed by Zerocracy](https://www.0crat.com/badge/CE8UGB6NP.svg)](https://www.0crat.com/p/CE8UGB6NP)
+[![Maintainability](https://api.codeclimate.com/v1/badges/2861728929db934eb376/maintainability)](https://codeclimate.com/github/emilianodellacasa/ruby-asterisk/maintainability)
 
 This gem add support to your Ruby or RubyOnRails projects to Asterisk Manager Interface
 
