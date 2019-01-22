@@ -175,6 +175,11 @@ module RubyAsterisk
       execute 'Atxfer', {'Channel' => channel, 'Exten' => exten.to_s, 'Context' => context, 'Priority' => priority}
     end
 
+    def wait_event(timeout=-1)
+      @timeout = [@timeout, timeout].max
+      execute 'WaitEvent', {'Timeout' => timeout}
+    end
+
     private
     def execute(command, options = {})
       request = Request.new(command, options)

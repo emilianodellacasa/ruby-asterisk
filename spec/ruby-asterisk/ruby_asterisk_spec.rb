@@ -147,4 +147,11 @@ describe RubyAsterisk do
     end
   end
 
+  describe ".wait_event" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.wait_event(1).should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
 end
