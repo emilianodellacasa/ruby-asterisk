@@ -156,6 +156,54 @@ Attendand transfer
  @ami.atxfer(channel, exten, context, priority = '1')
 ```
 
+### WAIT EVENT
+
+Wait for an event to occur. Timeout in seconds to wait for events, -1 means forever
+
+```ruby
+ wait_event(timeout=-1)
+```
+
+### MONITOR
+
+Monitor a channel
+
+```ruby
+ monitor(channel,mix=false,file=nil,format='wav')
+```
+
+### STOP MONITOR
+
+Stop monitoring a channel
+
+```ruby
+ stop_monitor(channel)
+```
+
+### PAUSE MONITOR
+
+Pause monitoring of a channel
+
+```ruby
+ pause_monitor(channel)
+```
+
+### UNPAUSE MONITOR
+
+Unpause monitoring of a channel
+
+```ruby
+ unpause_monitor(channel)
+```
+
+### CHANGE MONITOR
+
+Change monitoring filename of a channel
+
+```ruby
+ change_monitor(channel,file)
+```
+
 ### THE RESPONSE OBJECT
 
 The response object contains all information about all data received from Asterisk. Here follows a list of all object's properties:

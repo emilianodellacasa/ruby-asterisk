@@ -147,4 +147,46 @@ describe RubyAsterisk do
     end
   end
 
+  describe ".wait_event" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.wait_event(1).should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
+  describe ".monitor" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.monitor("SIP/9100").should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
+  describe ".stop_monitor" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.stop_monitor("SIP/9100").should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
+  describe ".pause_monitor" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.pause_monitor("SIP/9100").should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
+  describe ".unpause_monitor" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.unpause_monitor("SIP/9100").should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
+  describe ".change_monitor" do
+    it "should return a response object" do
+      @session.login("mark","mysecret")
+      @session.change_monitor("SIP/9100","first-sip-9100").should be_kind_of(RubyAsterisk::Response)
+    end
+  end
+
 end
