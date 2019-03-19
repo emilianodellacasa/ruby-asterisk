@@ -88,6 +88,10 @@ module RubyAsterisk
     def extension_state(exten, context, action_id = nil)
       execute 'ExtensionState', {'Exten' => exten, 'Context' => context, 'ActionID' => action_id}
     end
+    
+    def device_state_list
+      execute 'DeviceStateList'
+    end
 
     def skinny_devices
       execute 'SKINNYdevices'
@@ -165,6 +169,10 @@ module RubyAsterisk
 
     def sip_peers
       execute 'SIPpeers'
+    end
+    
+    def sip_show_peer(peer)
+      execute 'SIPshowpeer', {'Peer' => peer}
     end
     
     def hangup(channel)

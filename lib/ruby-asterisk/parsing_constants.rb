@@ -54,6 +54,11 @@ module RubyAsterisk
       :search_for => 'Response: Success',
       :stop_with => nil
     },
+    'DeviceStateList'  => {
+      :symbol => :hints,
+      :search_for => 'Response: Success',
+      :stop_with => nil
+    },
     'SKINNYdevices'  => {
       :symbol => :skinnydevs,
       :search_for => 'Event: DeviceEntry',
@@ -82,6 +87,11 @@ module RubyAsterisk
     'SIPpeers' => {
       :symbol => :peers,
       :search_for => 'Event: PeerEntry',
+      :stop_with => nil
+    },
+    'SIPshowpeer'  => {
+      :symbol => :hints,
+      :search_for => 'Response: Success',
       :stop_with => nil
     },
   }
