@@ -95,6 +95,15 @@ To get the state of an extension use the following command
 ```ruby
  @ami.extension_state(@exten,@context)
 ```
+
+### DEVICE STATE LIST
+
+To get list of states of devices
+
+```ruby
+ @ami.device_state_list(@exten,@context)
+```
+
 ### SKINNY DEVICES AND LINES
 
 To get list of skinny devices
@@ -139,6 +148,14 @@ To get a list of sip peers (equivalent to "sip show peers" call on the asterisk 
 
 ```ruby
  @ami.sip_peers
+```
+
+### SIP SHOW PEER
+
+To get info of a peer (equivalent to "sip show peer" call on the asterisk server).
+
+```ruby
+ @ami.sip_show_peer(peer)
 ```
 
 ### STATUS
