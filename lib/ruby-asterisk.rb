@@ -105,9 +105,9 @@ module RubyAsterisk
       execute 'Status', {'Channel' => channel, 'ActionID' => action_id}
     end
 
-    def originate(channel, context, callee, priority, variable = nil, caller_id = nil, timeout = 30000)
+    def originate(channel, context, callee, priority, variable = nil, caller_id = nil, timeout = 30000, async = nil)
       @timeout = [@timeout, timeout/1000].max
-      execute 'Originate', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable  }
+      execute 'Originate', {'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority, 'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable, 'Async' => async }
     end
 
     def originate_app(caller, app, data, async)
