@@ -158,6 +158,14 @@ To get info of a peer (equivalent to "sip show peer" call on the asterisk server
  @ami.sip_show_peer(peer)
 ```
 
+### SIP SHOW REGISTRY
+
+Retrieve a status of SIP registries and their statuses from the Asterisk server.
+
+```ruby
+ @ami.sip_show_registry
+```
+
 ### STATUS
                                                                                                                         
 To get a status of a single channel or for all channels                                                                                                                                  
