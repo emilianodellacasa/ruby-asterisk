@@ -208,6 +208,10 @@ module RubyAsterisk
       execute 'ChangeMonitor', {'Channel' => channel, 'File' => file}
     end
 
+    def sip_show_registry
+      execute 'SIPshowregistry'
+    end
+
     private
     def execute(command, options = {})
       request = Request.new(command, options)
