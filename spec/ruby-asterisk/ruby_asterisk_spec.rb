@@ -26,35 +26,35 @@ describe RubyAsterisk do
     end
 
     it "should start the session as disconnected" do
-      @session.connected.should_not be_true
+      @session.connected.should be false
     end
   end 
 
   describe ".connect" do
     it "should return true if everything is ok" do
-      @session.connect.should be_true
+      @session.connect.should be true
     end
 
     it "should return false if everything if something went wrong" do
       @session.port = 666
-      @session.connect.should_not be_true
+      @session.connect.should be false
       @session.port = 5038
     end
 
     it "should change state to session as connected" do
       @session.connect
-      @session.connected.should be_true
+      @session.connected.should be true
     end
   end
 
   describe ".disconnect" do
     it "should return true if everything is ok" do
-      @session.disconnect.should be_true
+      @session.disconnect.should be true
     end
 
     it "should change state to session as disconnected" do
       @session.disconnect
-      @session.connected.should_not be_true
+@session.connected.should be false
     end
   end
 
@@ -69,7 +69,7 @@ describe RubyAsterisk do
 
     describe "if everything is ok" do
       it "should return a successfull response" do
-        @session.login("mark","mysecret").success.should be_true
+        @session.login("mark","mysecret").success.should be true
       end
 
       it "should fill the ActionID" do
@@ -83,7 +83,7 @@ describe RubyAsterisk do
 
     describe "if credentials are wrong" do
       it "should not return a successfull response" do
-        @session.login("mark","wrong").success.should be_false
+        @session.login("mark","wrong").success.should be false
       end
     end
   end

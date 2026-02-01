@@ -1,30 +1,17 @@
 # RUBY-ASTERISK
 
-[![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/emilianodellacasa/ruby-asterisk)
-[![Donate via Zerocracy](https://www.0crat.com/contrib-badge/CE8UGB6NP.svg)](https://www.0crat.com/contrib/CE8UGB6NP)
-[![Managed by Zerocracy](https://www.0crat.com/badge/CE8UGB6NP.svg)](https://www.0crat.com/p/CE8UGB6NP)
 [![Maintainability](https://api.codeclimate.com/v1/badges/2861728929db934eb376/maintainability)](https://codeclimate.com/github/emilianodellacasa/ruby-asterisk/maintainability)
 
-This gem add support to your Ruby or RubyOnRails projects to Asterisk Manager Interface
+This gem adds support to your Ruby or RubyOnRails projects to Asterisk Manager Interface
 
 There was a project with the same name, but it appears to be discontinued so I decided to start a new project
 
 ## Installation
 
-### Rails3
-
 Add to your Gemfile and run the `bundle` command to install it.
 
 ```ruby
  gem "ruby-asterisk"
-```
-
-### Rails2
-
-Simply run in your terminal
-
-```ruby
- gem install ruby-asterisk
 ```
 
 ## Usage
@@ -241,12 +228,6 @@ The response object contains all information about all data received from Asteri
 - raw_response
 
 The data property contains all additional information obtained from Asterisk, like for example the list of active channels after a "core show channels" command.
-
-## Todo List
-
-- Adding initialization parameters for Telnet options like Output_log, Waittime, Dump_log, timeout;
-- Adding test cases for better code coverage;
-- Refactoring of ruby-asterisk.rb, adding method_missing for the purpose of supporting as much AMI commands as possible
 
 ## Development
 
