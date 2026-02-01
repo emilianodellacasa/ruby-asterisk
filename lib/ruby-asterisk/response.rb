@@ -9,7 +9,7 @@ module RubyAsterisk
     attr_accessor :type, :action_id, :message, :data, :raw_response
 
     def initialize(type,response)
-      self.raw_response = response
+      self.raw_response = [response].flatten
       self.type = type
       self.action_id = self._parse_action_id
       self.message = self._parse_message
@@ -17,7 +17,7 @@ module RubyAsterisk
     end
 
     def success
-      self.raw_response.include?("Response: Success")
+      self.raw_response.join.include?("Response: Success")
     end
 
     protected
@@ -31,13 +31,14 @@ module RubyAsterisk
     end
 
     def _parse(field)
-      _value = nil
-      self.raw_response.each_line do |line|
-        if line.start_with?(field)
-          _value = line[line.rindex(":")+1..line.size].strip
+      self.raw_response.each do |data|
+        data.each_line do |line|
+          if line.start_with?(field)
+            return line[line.rindex(":")+1..line.size].strip
+          end
         end
       end
-      _value
+      nil
     end
 
     def _parse_response

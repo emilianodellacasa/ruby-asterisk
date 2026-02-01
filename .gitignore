@@ -1,7 +1,51 @@
+# Ignore bundler config.
+/.bundle
+
+# Ignore all logfiles and tempfiles.
+/log/*
+/tmp/*
+/docs/*
+!/log/.keep
+!/tmp/.keep
+
+# Ignore pidfiles, but keep the directory.
+/tmp/pids/*
+!/tmp/pids/
+!/tmp/pids/.keep
+
+# Ignore storage files.
+/storage/*
+!/storage/
+!/storage/.keep
+
+# Ignore master key for credentials.
+/config/master.key
+
+# Ignore locally-built DNS reverse lookup file.
+/tmp/resolv.conf.pred
+
+# Ignore local gems.
+/vendor/bundle/
+/vendor/gems/
+/vendor/cache/
 *.gem
-.bundle
-Gemfile.lock
-pkg/*
-coverage/*
+/.gem/
+
+# Ignore documentation files.
+/doc/
+/rdoc/
+
+# Ignore compiled files.
+*.o
+*.so
+
+# Ignore project-specific files
+.idea/
+.DS_Store
+coverage/
 .cane
 *_high_water_mark
+CLAUDE.md
+GEMINI.md
+pkg/
+Gemfile.lock
