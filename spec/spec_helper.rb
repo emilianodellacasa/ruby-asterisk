@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'simplecov'
 SimpleCov.start
 require 'rubygems'
@@ -25,15 +27,15 @@ RSpec.configure do |config|
       full_command = @commands.join
       @commands = [] # reset for next command
 
-      response = if full_command.include?("Action: Login")
-        if full_command.include?("Secret: mysecret")
-          "Response: Success\nActionID: 123\nMessage: Authentication accepted\n\n"
-        elsif full_command.include?("Secret: wrong")
-          "Response: Error\nActionID: 123\nMessage: Authentication failed\n\n"
-        end
-      else
-        "Response: Success\nActionID: 123\n\n"
-      end
+      response = if full_command.include?('Action: Login')
+                   if full_command.include?('Secret: mysecret')
+                     "Response: Success\nActionID: 123\nMessage: Authentication accepted\n\n"
+                   elsif full_command.include?('Secret: wrong')
+                     "Response: Error\nActionID: 123\nMessage: Authentication failed\n\n"
+                   end
+                 else
+                   "Response: Success\nActionID: 123\n\n"
+                 end
       block.call(response) if response
     end
   end
