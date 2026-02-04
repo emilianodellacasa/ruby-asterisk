@@ -7,7 +7,23 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Linting
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - name: Install dependencies
+        run: bundle install
+      - name: Run Rubocop
+        run: bundle exec rubocop
+
   test:
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -34,7 +50,7 @@ jobs:
         run: bundle exec rake spec
 
   release:
-    needs: test
+    needs: [lint, test]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
