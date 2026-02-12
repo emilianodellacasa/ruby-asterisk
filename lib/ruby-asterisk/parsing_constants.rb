@@ -96,5 +96,5 @@ module RubyAsterisk
       search_for: 'Response: Success',
       stop_with: nil
     }
-  }.freeze
+  }.each_value(&:freeze).freeze
 end
