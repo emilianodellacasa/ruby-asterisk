@@ -48,6 +48,10 @@ Layout/LineLength:
 Gemspec/DevelopmentDependencies:
   Enabled: false
 
+# We explicitly use add_runtime_dependency for clarity about dependency types
+Gemspec/AddRuntimeDependency:
+  Enabled: false
+
 # Exclude legacy AMI class from parameter list checks until refactored
 Metrics/ParameterLists:
   Exclude:
