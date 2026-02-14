@@ -8,14 +8,16 @@ module RubyAsterisk
   # Class for response coming from Asterisk
   #
   class Response
-    attr_accessor :type, :action_id, :message, :data, :raw_response
+    attr_reader :type, :action_id, :message, :data, :raw_response
 
     def initialize(type, response)
-      self.raw_response = [response].flatten
-      self.type = type
-      self.action_id = _parse_action_id
-      self.message = _parse_message
-      self.data = _parse_response
+      @raw_response = [response].flatten
+      @type = type
+      @action_id = _parse_action_id
+      @message = _parse_message
+      @data = _parse_response
+      deep_freeze
+      freeze
     end
 
     def success
@@ -43,6 +45,29 @@ module RubyAsterisk
 
     def _parse_response
       ResponseParser.parse(raw_response, type)
+    end
+
+    private
+
+    def deep_freeze
+      @type.freeze
+      @action_id.freeze
+      @message.freeze
+      deep_freeze_value(@raw_response)
+      deep_freeze_value(@data)
+    end
+
+    def deep_freeze_value(obj)
+      case obj
+      when Hash
+        obj.each do |key, value|
+          key.freeze
+          deep_freeze_value(value)
+        end
+      when Array
+        obj.each { |element| deep_freeze_value(element) }
+      end
+      obj.freeze
     end
   end
 end
