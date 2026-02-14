@@ -3,6 +3,7 @@
 require 'ruby-asterisk/version'
 require 'ruby-asterisk/request'
 require 'ruby-asterisk/response'
+require 'ruby-asterisk/response_builder'
 require 'net/telnet'
 
 module RubyAsterisk
@@ -218,14 +219,18 @@ module RubyAsterisk
 
     def execute(command, options = {})
       request = Request.new(command, options)
-      request.commands.each do |command|
-        @session.write(command)
+      request.commands.each do |cmd|
+        @session.write(cmd)
       end
+      response_data = +''
       @session.waitfor('Match' => /ActionID: #{request.action_id}.*?\n\n/m, 'Timeout' => @timeout,
                        'Waittime' => @wait_time) do |data|
-        request.response_data << data.to_s
+        response_data << data.to_s
       end
-      Response.new(command, request.response_data)
+      builder = ResponseBuilder.new
+      builder.type = command
+      builder.raw_response = response_data
+      builder.build
     end
   end
 end
