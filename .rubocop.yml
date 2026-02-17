@@ -23,7 +23,7 @@ Metrics/ClassLength:
   Enabled: true
   Max: 100
   Exclude:
-    - 'lib/ruby-asterisk.rb'
+    - 'lib/ruby-asterisk/ami/client.rb'
 
 # Reasonable method length
 Metrics/MethodLength:
@@ -56,6 +56,7 @@ Gemspec/AddRuntimeDependency:
 Metrics/ParameterLists:
   Exclude:
     - 'lib/ruby-asterisk.rb'
+  CountKeywordArgs: false
 
 # Exclude legacy AMI class from optional boolean parameter checks
 Style/OptionalBooleanParameter:
