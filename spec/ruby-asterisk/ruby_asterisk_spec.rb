@@ -9,7 +9,7 @@ describe RubyAsterisk do
   end
 
   before :each do
-    @session = RubyAsterisk::AMI.new('127.0.0.1', 5038)
+    @session = RubyAsterisk::AMI.new(host: '127.0.0.1', port: 5038)
   end
 
   after :each do
@@ -60,132 +60,132 @@ describe RubyAsterisk do
 
   describe '.login' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret').should be_kind_of(RubyAsterisk::Response)
+      @session.login(username: 'mark', secret: 'mysecret').should be_kind_of(RubyAsterisk::Response)
     end
 
     it 'should return a response with type Login' do
-      @session.login('mark', 'mysecret').type.should eq('Login')
+      @session.login(username: 'mark', secret: 'mysecret').type.should eq('Login')
     end
 
     describe 'if everything is ok' do
       it 'should return a successfull response' do
-        @session.login('mark', 'mysecret').success.should be true
+        @session.login(username: 'mark', secret: 'mysecret').success.should be true
       end
 
       it 'should fill the ActionID' do
-        @session.login('mark', 'mysecret').action_id.should_not be_nil
+        @session.login(username: 'mark', secret: 'mysecret').action_id.should_not be_nil
       end
 
       it 'should fill the Message' do
-        @session.login('mark', 'mysecret').message.should_not be_nil
+        @session.login(username: 'mark', secret: 'mysecret').message.should_not be_nil
       end
     end
 
     describe 'if credentials are wrong' do
       it 'should not return a successfull response' do
-        @session.login('mark', 'wrong').success.should be false
+        @session.login(username: 'mark', secret: 'wrong').success.should be false
       end
     end
   end
 
   describe '.core_show_channels' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.core_show_channels.should be_kind_of(RubyAsterisk::Response)
     end
 
     it 'should contain additional data about channels' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.core_show_channels.data[:channels].should_not be_nil
     end
   end
 
   describe '.parked_calls' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.parked_calls.should be_kind_of(RubyAsterisk::Response)
     end
 
     it 'should contain additional data about parked calls' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.parked_calls.data[:calls].should_not be_nil
     end
   end
 
   describe '.originate' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
-      @session.originate('SIP/9100', 'OUTGOING', '123456', '1', 'queue=SIP/1000&SIP/1001').should be_kind_of(RubyAsterisk::Response)
+      @session.login(username: 'mark', secret: 'mysecret')
+      @session.originate('SIP/9100', 'OUTGOING', '123456', '1', variable: 'queue=SIP/1000&SIP/1001').should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.command' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.command('meetme list').should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.meet_me_list' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.meet_me_list.should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.extension_state' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
-      @session.extension_state('9100', 'HINT').should be_kind_of(RubyAsterisk::Response)
+      @session.login(username: 'mark', secret: 'mysecret')
+      @session.extension_state(exten: '9100', context: 'HINT').should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.sip_peers' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.sip_peers.should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.wait_event' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
-      @session.wait_event(1).should be_kind_of(RubyAsterisk::Response)
+      @session.login(username: 'mark', secret: 'mysecret')
+      @session.wait_event(timeout: 1).should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.monitor' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.monitor('SIP/9100').should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.stop_monitor' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.stop_monitor('SIP/9100').should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.pause_monitor' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.pause_monitor('SIP/9100').should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.unpause_monitor' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
+      @session.login(username: 'mark', secret: 'mysecret')
       @session.unpause_monitor('SIP/9100').should be_kind_of(RubyAsterisk::Response)
     end
   end
 
   describe '.change_monitor' do
     it 'should return a response object' do
-      @session.login('mark', 'mysecret')
-      @session.change_monitor('SIP/9100', 'first-sip-9100').should be_kind_of(RubyAsterisk::Response)
+      @session.login(username: 'mark', secret: 'mysecret')
+      @session.change_monitor(channel: 'SIP/9100', file: 'first-sip-9100').should be_kind_of(RubyAsterisk::Response)
     end
   end
 end
