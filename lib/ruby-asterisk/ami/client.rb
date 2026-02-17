@@ -115,7 +115,8 @@ module RubyAsterisk
 
       def originate_app(channel:, application:, data:, async:)
         execute 'Originate',
-                { 'Channel' => channel, 'Application' => application, 'Data' => data, 'Timeout' => '30000', 'Async' => async }
+                { 'Channel' => channel, 'Application' => application, 'Data' => data, 'Timeout' => '30000',
+                  'Async' => async }
       end
 
       def channels
