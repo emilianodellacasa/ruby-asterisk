@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # Channel commands
+      #
       module Channel
         def core_show_channels
           execute 'CoreShowChannels'
@@ -42,7 +46,8 @@ module RubyAsterisk
         end
 
         def atxfer(channel:, exten:, context:, priority: '1')
-          execute 'Atxfer', { 'Channel' => channel, 'Exten' => exten.to_s, 'Context' => context, 'Priority' => priority }
+          execute 'Atxfer',
+                  { 'Channel' => channel, 'Exten' => exten.to_s, 'Context' => context, 'Priority' => priority }
         end
       end
     end

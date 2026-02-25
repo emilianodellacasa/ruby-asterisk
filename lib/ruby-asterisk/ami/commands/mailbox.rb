@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # Mailbox commands
+      #
       module Mailbox
         def mailbox_status(mailbox:, context: 'default')
           execute 'MailboxStatus', { 'Mailbox' => "#{mailbox}@#{context}" }

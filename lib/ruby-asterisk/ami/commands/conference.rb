@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # Conference commands
+      #
       module Conference
         def meet_me_list
           execute 'MeetMeList'

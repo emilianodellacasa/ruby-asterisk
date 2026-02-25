@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # SIP commands
+      #
       module Sip
         def sip_peers
           execute 'SIPpeers'

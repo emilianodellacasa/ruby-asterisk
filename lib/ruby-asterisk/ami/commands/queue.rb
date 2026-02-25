@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # Queue commands
+      #
       module Queue
         def queues
           execute 'Queues', {}

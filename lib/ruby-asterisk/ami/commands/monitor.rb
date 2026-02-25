@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # Monitor commands
+      #
       module Monitor
         def monitor(channel, mix: false, file: nil, format: 'wav')
           execute 'Monitor', { 'Channel' => channel, 'File' => file, 'Mix' => mix, 'Format' => format }

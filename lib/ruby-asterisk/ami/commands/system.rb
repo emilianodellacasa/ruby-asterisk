@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # System commands
+      #
       module System
         def login(username:, secret:)
           connect unless connected

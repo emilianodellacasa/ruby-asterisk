@@ -3,6 +3,10 @@
 module RubyAsterisk
   module AMI
     module Commands
+      ##
+      #
+      # Extension commands
+      #
       module Extension
         def parked_calls
           execute 'ParkedCalls'
