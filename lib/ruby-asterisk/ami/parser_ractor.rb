@@ -27,107 +27,85 @@ module RubyAsterisk
     #   { type: :error,        message: }       (forwarded)
     #
     class ParserRactor
-      # AMI message delimiter — two consecutive CRLF pairs.
       DELIMITER     = "\r\n\r\n"
       DELIMITER_LEN = DELIMITER.length
 
-      # Defined as a constant Proc so the Ractor block closes over nothing
-      # non-shareable.  The `consumer` Ractor is passed as an argument
-      # (shareable by definition).
-      RACTOR_LOGIC = Proc.new do |consumer|
-        buffer = +''
+      # Parses "Key: Value\r\n..." lines into a frozen hash.
+      # Lines without a colon separator (e.g. the AMI welcome banner) are skipped.
+      def self.parse_headers(raw)
+        headers = {}
+        raw.split(/\r?\n/).each do |line|
+          next if line.empty?
 
+          colon = line.index(':')
+          next unless colon&.positive?
+
+          headers[line[0, colon].freeze] = line[(colon + 1)..].strip.freeze
+        end
+        headers.freeze
+      end
+
+      # Sends one parsed message to the consumer based on its headers.
+      def self.dispatch(raw, consumer)
+        headers = parse_headers(raw)
+        return if headers.empty?
+
+        frozen_raw = raw.freeze
+        if headers.key?('Response')
+          consumer.send({ type: :response, headers: headers, raw: frozen_raw,
+                          action_id: headers['ActionID'] }.freeze)
+        elsif headers.key?('Event')
+          consumer.send({ type: :event,
+                          event: RubyAsterisk::AMI::Event.new(headers, frozen_raw) }.freeze)
+        end
+      end
+
+      # Extracts and dispatches all complete messages from the buffer.
+      def self.drain(buffer, consumer)
+        while (idx = buffer.index(DELIMITER))
+          raw = buffer.slice!(0, idx + DELIMITER_LEN)
+          dispatch(raw, consumer)
+        end
+      end
+
+      # Defined as a constant proc so the Ractor block closes over nothing
+      # non-shareable. All heavy lifting is delegated to class methods above.
+      RACTOR_LOGIC = proc do |consumer|
+        buffer = +''
         loop do
           msg = Ractor.receive
-
           case msg[:type]
-
-          # ── raw data from the socket ──────────────────────────────────────
           when :data
             buffer << msg[:data]
-
-            # Drain all complete messages from the buffer.
-            while (idx = buffer.index(DELIMITER))
-              raw = buffer.slice!(0, idx + DELIMITER_LEN)
-
-              # Parse every "Key: Value" line; skip unparseable lines (e.g.
-              # the AMI welcome banner "Asterisk Call Manager/1.1\n").
-              headers = {}
-              raw.split(/\r?\n/).each do |line|
-                next if line.empty?
-                colon = line.index(':')
-                next unless colon && colon.positive?
-
-                key   = line[0, colon].freeze
-                value = line[colon + 1..].lstrip.rstrip.freeze
-                headers[key] = value
-              end
-              headers.freeze
-
-              next if headers.empty?
-
-              frozen_raw = raw.freeze
-
-              if headers.key?('Response')
-                consumer.send(
-                  {
-                    type:      :response,
-                    headers:   headers,
-                    raw:       frozen_raw,
-                    action_id: headers['ActionID']
-                  }.freeze
-                )
-
-              elsif headers.key?('Event')
-                consumer.send(
-                  {
-                    type:  :event,
-                    event: RubyAsterisk::AMI::Event.new(headers, frozen_raw)
-                  }.freeze
-                )
-              end
-              # Messages with neither Response: nor Event: (e.g. bare banner
-              # lines that ended up without a proper delimiter) are silently
-              # discarded — they carry no actionable data.
-            end
-
-          # ── pass-through control messages ─────────────────────────────────
+            ParserRactor.drain(buffer, consumer)
           when :connected, :disconnected, :error
             consumer.send(msg)
-
-          # ── graceful shutdown ──────────────────────────────────────────────
           when :stop
             break
           end
         end
       end
 
-      # @param consumer [Ractor] the Ractor that will receive parsed messages
-      #   (typically Ractor.current of the AMI::Client thread).
+      # @param consumer [Ractor] the Ractor that will receive parsed messages.
       def initialize(consumer)
         @ractor = Ractor.new(consumer, &RACTOR_LOGIC)
       end
 
       ##
-      # The underlying Ractor.
-      # Pass this to SocketReaderRactor#start(consumer:) so that raw chunks
-      # are routed into the parser automatically.
+      # The underlying Ractor — pass to SocketReaderRactor#start(consumer:)
+      # to route raw chunks into this parser automatically.
       #
       # @return [Ractor]
       def input
         @ractor
       end
 
-      ##
       # Send a raw message directly into the parser (useful for testing).
-      #
       def push(msg)
         @ractor.send(msg.freeze)
       end
 
-      ##
       # Stop the parser Ractor gracefully.
-      #
       def stop
         @ractor.send({ type: :stop }.freeze)
       end

@@ -39,7 +39,7 @@ RSpec.describe RubyAsterisk::AMI::ParserRactor do
     end
 
     it 'assembles an Event split across three chunks' do
-      parser.push(type: :data, data: "Event: Han")
+      parser.push(type: :data, data: 'Event: Han')
       parser.push(type: :data, data: "gup\r\nChannel: SIP/")
       parser.push(type: :data, data: "101\r\n\r\n")
 
@@ -54,9 +54,9 @@ RSpec.describe RubyAsterisk::AMI::ParserRactor do
       parser.push(type: :data, data: "Response: Success\r\nActionID: xyz\r\n")
 
       # No message should be ready yet
-      expect {
+      expect do
         Timeout.timeout(0.05) { Ractor.receive }
-      }.to raise_error(Timeout::Error)
+      end.to raise_error(Timeout::Error)
 
       # Complete it
       parser.push(type: :data, data: "\r\n")
@@ -78,18 +78,18 @@ RSpec.describe RubyAsterisk::AMI::ParserRactor do
       first  = receive_msg
       second = receive_msg
 
-      expect(first[:type]).to  eq(:response)
+      expect(first[:type]).to eq(:response)
       expect(first[:action_id]).to eq('r1')
 
-      expect(second[:type]).to  eq(:event)
+      expect(second[:type]).to eq(:event)
       expect(second[:event].name).to eq('FullyBooted')
       expect(second[:event].headers['Status']).to eq('Fully Booted')
     end
 
     it 'handles ten back-to-back events in a single chunk' do
-      chunk = (1..10).map { |i|
+      chunk = (1..10).map do |i|
         "Event: TestEvent\r\nSequence: #{i}\r\n\r\n"
-      }.join
+      end.join
 
       parser.push(type: :data, data: chunk)
 
@@ -119,7 +119,7 @@ RSpec.describe RubyAsterisk::AMI::ParserRactor do
       parser.push(type: :data, data: "Response: Success\r\nActionID: f1\r\n\r\n")
       msg = receive_msg
       expect(msg[:headers]).to be_frozen
-      msg[:headers].each_key  { |k| expect(k).to be_frozen }
+      msg[:headers].each_key { |k| expect(k).to be_frozen }
       msg[:headers].each_value { |v| expect(v).to be_frozen }
     end
 
@@ -221,21 +221,21 @@ RSpec.describe RubyAsterisk::AMI::ParserRactor do
       # they are all returned — demonstrating that the parser ran in a
       # separate Ractor while the main thread was free to do other work.
       n = 200
-      chunk = (1..n).map { |i|
+      chunk = (1..n).map do |i|
         "Response: Success\r\nActionID: id#{i}\r\n\r\n"
-      }.join
+      end.join
 
       # Send the whole batch at once and then do "other work" in main thread.
       parser.push(type: :data, data: chunk)
 
       # Simulate main-thread work that runs concurrently with parsing.
-      work_result = (1..1000).reduce(:+)   # some arithmetic
+      work_result = (1..1000).sum
 
       # Drain all parsed responses.
       received_ids = []
       n.times { received_ids << receive_msg[:action_id] }
 
-      expect(work_result).to eq(500_500)   # sanity check
+      expect(work_result).to eq(500_500)
       expect(received_ids.length).to eq(n)
       expect(received_ids).to eq((1..n).map { |i| "id#{i}" })
     end
