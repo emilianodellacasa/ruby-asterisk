@@ -12,8 +12,12 @@ RSpec.configure do |config|
     c.syntax = %i[should expect]
   end
 
-  # Remove legacy Net::Telnet mocks as we moved to Ractor based implementation
-  # config.before(:each) do
-  #   ...
-  # end
+  # Give a moment for all Ractors/Threads to be cleaned up before RSpec exits.
+  # This can help prevent the GitHub Actions runner from prematurely killing
+  # lingering processes and marking the job as "canceled".
+  config.after(:suite) do
+    puts "\n[CI] Waiting for background processes to terminate..."
+    sleep 0.2
+    puts '[CI] Done.'
+  end
 end
