@@ -39,30 +39,9 @@ module RubyAsterisk
       end
 
       def connect
-        # Create and start the socket reader Ractor
         @reader_ractor = SocketReaderRactor.new(host, port)
         @reader_ractor.start(consumer: Ractor.current)
-        
-        # Wait for connection confirmation
-        begin
-          msg = Timeout.timeout(@timeout) { Ractor.receive }
-          if msg[:type] == :connected
-            self.connected = true
-            # Consume welcome message
-            consume_until_idle
-            return true
-          elsif msg[:type] == :error
-            puts "Connection error: #{msg[:message]}"
-            self.connected = false
-            return false
-          end
-        rescue Timeout::Error
-          puts "Timeout connecting to #{host}:#{port}"
-          self.connected = false
-          return false
-        end
-        
-        false
+        handle_connection_message
       rescue StandardError => e
         puts "Connection error: #{e.message}"
         self.connected = false
@@ -70,113 +49,104 @@ module RubyAsterisk
       end
 
       def disconnect
-        if @reader_ractor
-          @reader_ractor.stop
-          # Wait for disconnected? No need.
-          @reader_ractor = nil
-        end
-        
+        @reader_ractor&.stop
+        @reader_ractor = nil
         self.connected = false
         true
       rescue StandardError => e
         puts e
         false
       end
-      
+
       def login(username:, secret:)
         connect unless connected
         execute 'Login', { 'Username' => username, 'Secret' => secret, 'Event' => 'On' }
       end
-      
+
       def logoff
         execute 'Logoff'
       end
 
-      # Expose execute for commands mixins
       def execute(command, options = {})
         request = Request.new(command, options)
-        
-        # Send commands via Ractor
-        request.commands.each do |cmd|
-          @reader_ractor.write(cmd)
-        end
-        
-        # Wait for response with ActionID
+        request.commands.each { |cmd| @reader_ractor.write(cmd) }
         response_data = wait_for_response(request.action_id)
-        
-        # Build response
-        builder = ResponseBuilder.new
-        builder.type = command
-        builder.raw_response = response_data
-        builder.build
+        ResponseBuilder.new.tap do |builder|
+          builder.type = command
+          builder.raw_response = response_data
+        end.build
       end
 
       private
 
+      def handle_connection_message
+        msg = Timeout.timeout(@timeout) { Ractor.receive }
+        if msg[:type] == :connected
+          self.connected = true
+          consume_until_idle
+          return true
+        end
+        handle_connection_error(msg)
+        false
+      rescue Timeout::Error
+        puts "Timeout connecting to #{host}:#{port}"
+        self.connected = false
+        false
+      end
+
+      def handle_connection_error(msg)
+        return unless msg[:type] == :error
+
+        puts "Connection error: #{msg[:message]}"
+        self.connected = false
+      end
+
       def consume_until_idle(idle_time = 0.5)
-        # Consume any pending messages until idle
         last_message_time = Time.now
-        
         loop do
-          begin
-            # Quick check for messages
-            msg = Timeout.timeout(0.05) { Ractor.receive }
-            
-            case msg[:type]
-            when :data
-              @response_buffer << msg[:data]
-              last_message_time = Time.now
-            when :error
-              # Log error but continue?
-            when :disconnected
-              raise "Disconnected"
-            end
-          rescue Timeout::Error
-            # No message received
-            break if Time.now - last_message_time > idle_time
-          end
+          msg = Timeout.timeout(0.05) { Ractor.receive }
+          process_incoming_message(msg)
+          last_message_time = Time.now
+        rescue Timeout::Error
+          break if Time.now - last_message_time > idle_time
         end
       end
 
       def wait_for_response(action_id)
         start_time = Time.now
-        
-        # Pattern to match complete response with specific ActionID
-        # Using simple regex for now
         pattern = /ActionID: #{Regexp.escape(action_id)}.*?\r\n\r\n/m
-        
         loop do
-          # Check buffer
-          if match = @response_buffer.match(pattern)
-            response_data = match[0]
-            # Remove ONLY the matched part
-            # Be careful with sub! which replaces first occurrence
-            @response_buffer.sub!(response_data, '')
-            return response_data
+          if (match = @response_buffer.match(pattern))
+            return extract_response_from_buffer(match)
           end
-          
-          # Check timeout
-          if Time.now - start_time > @timeout
-            raise "Timeout waiting for response (ActionID: #{action_id})"
-          end
-          
-          # Wait for more data
-          begin
-            # Blocking wait with timeout
-            wait_remaining = @timeout - (Time.now - start_time)
-            msg = Timeout.timeout([wait_remaining, @wait_time].min) { Ractor.receive }
-            
-            case msg[:type]
-            when :data
-              @response_buffer << msg[:data]
-            when :error
-              raise "Error from Ractor: #{msg[:message]}"
-            when :disconnected
-              raise "Disconnected: #{msg[:reason]}"
-            end
-          rescue Timeout::Error
-            # Just loop again to check buffer/timeout
-          end
+          raise "Timeout waiting for response (ActionID: #{action_id})" if Time.now - start_time > @timeout
+
+          wait_for_more_data(start_time)
+        end
+      end
+
+      def extract_response_from_buffer(match)
+        response_data = match[0]
+        @response_buffer.sub!(response_data, '')
+        response_data
+      end
+
+      def wait_for_more_data(start_time)
+        wait_remaining = @timeout - (Time.now - start_time)
+        msg = Timeout.timeout([wait_remaining, @wait_time].min) { Ractor.receive }
+        process_incoming_message(msg)
+      rescue Timeout::Error
+        # Loop again
+      end
+
+      def process_incoming_message(msg)
+        case msg[:type]
+        when :data
+          @response_buffer << msg[:data]
+        when :error
+          raise "Error from Ractor: #{msg[:message]}"
+        when :disconnected
+          raise "Disconnected: #{msg[:reason]}"
         end
       end
     end

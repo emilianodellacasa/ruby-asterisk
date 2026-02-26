@@ -5,7 +5,7 @@ module RubyAsterisk
     module Commands
       ##
       #
-      # SIP commands
+      # Sip commands
       #
       module Sip
         def sip_peers

@@ -10,42 +10,43 @@ require 'timeout'
 
 $stdout.sync = true
 
-puts "Starting Benchmark for ruby-asterisk SocketReaderRactor..."
+puts 'Starting Benchmark for ruby-asterisk SocketReaderRactor...'
+
+NEWLINES = ["\r\n", "\n"].freeze
 
 # Scenario 1: Throughput (Ping)
 puts "\n--- Scenario 1: Throughput (1000 Pings) ---"
 
 mock_server_thread, mock_port = MockAMIServer.start do |client|
-  buffer = +""
-  while line = client.gets
-    # puts "S: #{line.inspect}"
+  buffer = +''
+  while (line = client.gets)
     buffer << line
-    if line == "\r\n" || line == "\n"
-      # Process complete command
-      if buffer =~ /ActionID: (.*?)\s/
-        action_id = $1
-        if buffer =~ /Action: Ping/
-           client.print "Response: Success\r\nActionID: #{action_id}\r\nPing: Pong\r\n\r\n"
-        elsif buffer =~ /Action: Login/
-           client.print "Response: Success\r\nActionID: #{action_id}\r\nMessage: Authentication accepted\r\n\r\n"
-        end
+    next unless NEWLINES.include?(line)
+
+    # Process complete command
+    if buffer =~ /ActionID: (.*?)\s/
+      action_id = Regexp.last_match(1)
+      if buffer.include?('Action: Ping')
+        client.print "Response: Success\r\nActionID: #{action_id}\r\nPing: Pong\r\n\r\n"
+      elsif buffer.include?('Action: Login')
+        client.print "Response: Success\r\nActionID: #{action_id}\r\nMessage: Authentication accepted\r\n\r\n"
       end
-      buffer.clear
     end
+    buffer.clear
   end
 end
 
 begin
   client = RubyAsterisk::AMI::Client.new(host: 'localhost', port: mock_port)
-  
+
   unless client.connect
-    puts "Failed to connect!"
+    puts 'Failed to connect!'
     exit 1
   end
-  
+
   # Warmup
   client.ping
-  
+
   n = 1000
   time = Benchmark.realtime do
     n.times do |i|
@@ -54,20 +55,19 @@ begin
         puts "Ping #{i} failed!"
         break
       end
-      print "." if i % 100 == 0
+      print '.' if (i % 100).zero?
     end
   end
-  puts ""
-  
+  puts ''
+
   puts "Total Time: #{time.round(4)}s"
   puts "Throughput: #{(n / time).round(2)} req/s"
   puts "Avg Latency: #{(time / n * 1000).round(2)}ms"
-  
+
   client.disconnect
 ensure
-  mock_server_thread.kill if mock_server_thread
+  mock_server_thread&.kill
 end
-
 
 # Scenario 2: Async Event Flood
 puts "\n--- Scenario 2: Async Event Flood (5000 events) ---"
@@ -76,27 +76,27 @@ mock_server_thread, mock_port = MockAMIServer.start do |client|
   # Thread to blast events
   t_events = Thread.new do
     5000.times do |i|
-      client.print "Event: TestEvent\r\nPrivilege: call,all\r\nSequenceNumber: #{i}\r\nFile: test.c\r\nLine: 123\r\nFunc: test_func\r\n\r\n"
-      # sleep 0.0001 # Removed sleep to stress test harder
+      client.print "Event: TestEvent\r\nPrivilege: call,all\r\nSequenceNumber: #{i}\r\n" \
+                   "File: test.c\r\nLine: 123\r\nFunc: test_func\r\n\r\n"
     end
   end
-  
+
   # Handle Pings normally
-  buffer = +""
-  while line = client.gets
+  buffer = +''
+  while (line = client.gets)
     buffer << line
-    if line == "\r\n" || line == "\n"
-      # Process complete command
-      if buffer =~ /ActionID: (.*?)\s/
-        action_id = $1
-        if buffer =~ /Action: Ping/
-           client.print "Response: Success\r\nActionID: #{action_id}\r\nPing: Pong\r\n\r\n"
-        elsif buffer =~ /Action: Login/
-           client.print "Response: Success\r\nActionID: #{action_id}\r\nMessage: Authentication accepted\r\n\r\n"
-        end
+    next unless NEWLINES.include?(line)
+
+    # Process complete command
+    if buffer =~ /ActionID: (.*?)\s/
+      action_id = Regexp.last_match(1)
+      if buffer.include?('Action: Ping')
+        client.print "Response: Success\r\nActionID: #{action_id}\r\nPing: Pong\r\n\r\n"
+      elsif buffer.include?('Action: Login')
+        client.print "Response: Success\r\nActionID: #{action_id}\r\nMessage: Authentication accepted\r\n\r\n"
       end
-      buffer.clear
     end
+    buffer.clear
   end
   t_events.join
 end
@@ -104,28 +104,26 @@ end
 begin
   client = RubyAsterisk::AMI::Client.new(host: 'localhost', port: mock_port)
   client.connect
-  
+
   # Send pings while events are flooding
   n = 50
   success_count = 0
-  
+
   time = Benchmark.realtime do
     n.times do |i|
-      if client.ping
-        success_count += 1
-      end
-      print "." if i % 10 == 0
+      success_count += 1 if client.ping
+      print '.' if (i % 10).zero?
     end
   end
-  puts ""
-  
+  puts ''
+
   puts "Processed #{success_count}/#{n} Pings during flood"
   puts "Time: #{time.round(4)}s"
   puts "Throughput with flood: #{(n / time).round(2)} req/s"
-  
+
   client.disconnect
 ensure
-  mock_server_thread.kill if mock_server_thread
+  mock_server_thread&.kill
 end
 
 puts "\nBenchmark Complete."

@@ -2,6 +2,7 @@
 
 require 'ruby-asterisk/ami/client'
 
+# Main module for RubyAsterisk
 module RubyAsterisk
-  AMI = AMI::Client
+  # AMI = AMI::Client
 end
