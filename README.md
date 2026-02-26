@@ -2,9 +2,9 @@
 
 [![Maintainability](https://api.codeclimate.com/v1/badges/2861728929db934eb376/maintainability)](https://codeclimate.com/github/emilianodellacasa/ruby-asterisk/maintainability)
 
-This gem adds support to your Ruby or RubyOnRails projects to Asterisk Manager Interface
+This gem adds support to your Ruby or RubyOnRails projects to Asterisk Manager Interface (AMI).
 
-There was a project with the same name, but it appears to be discontinued so I decided to start a new project
+**Note:** Version 0.2.0+ uses **Ruby Ractors** for non-blocking I/O and requires **Ruby 3.1+**.
 
 ## Installation
 
@@ -18,10 +18,16 @@ Add to your Gemfile and run the `bundle` command to install it.
 
 ### INITIALIZE
 
-To create a new AMI session, just call the following command
+To create a new AMI session, just call the following command:
 
 ```ruby
- @ami = RubyAsterisk::AMI.new("192.168.1.1",5038)
+ require 'ruby-asterisk'
+ 
+ # Create a client instance (uses Ractor for async reading)
+ @ami = RubyAsterisk::AMI::Client.new(host: "192.168.1.1", port: 5038)
+ 
+ # Connect explicitly (starts the Ractor)
+ @ami.connect
 ```
 
 ### LOGIN
@@ -29,10 +35,10 @@ To create a new AMI session, just call the following command
 To log in, provide to the created sessions a valid username and password 
 
 ```ruby
- @ami.login("mark","mysecret")
+ @ami.login(username: "mark", secret: "mysecret")
 ```
 
-Like all commands, it will return a Response command that could be parsed accordingly
+Like all commands, it will return a Response object that could be parsed accordingly.
 
 ### CORE SHOW CHANNELS
 
@@ -55,7 +61,7 @@ To get a list of all parked calls on your Asterisk PBX, use the following comman
 To start a new call use the following command
 
 ```ruby
- @ami.originate("SIP/9100","OUTGOING","123456","1","var1=12,var2=99") # CHANNEL, CONTEXT, CALLEE, PRIORITY, VARIABLES
+ @ami.originate("SIP/9100","OUTGOING","123456","1", variable: "var1=12,var2=99") # CHANNEL, CONTEXT, CALLEE, PRIORITY, VARIABLES
 ```
 
 
@@ -80,7 +86,7 @@ To get a list of all active conferences use the following command
 To get the state of an extension use the following command
 
 ```ruby
- @ami.extension_state(@exten,@context)
+ @ami.extension_state(exten: @exten, context: @context)
 ```
 
 ### DEVICE STATE LIST
@@ -88,7 +94,7 @@ To get the state of an extension use the following command
 To get list of states of devices
 
 ```ruby
- @ami.device_state_list(@exten,@context)
+ @ami.device_state_list
 ```
 
 ### SKINNY DEVICES AND LINES
@@ -110,7 +116,7 @@ To get list of skinny lines
 To pause or unpause a member in a call queue
                                                                                                         
 ```ruby
- @ami.queue_pause("SIP/100", "true", "myqueue", "reason")                                                                            
+ @ami.queue_pause(interface: "SIP/100", paused: "true", queue: "myqueue", reason: "reason")                                                                            
 ```
 
 ### PING
@@ -165,7 +171,7 @@ To get a status of a single channel or for all channels
 Attendand transfer
 
 ```ruby
- @ami.atxfer(channel, exten, context, priority = '1')
+ @ami.atxfer(channel: channel, exten: exten, context: context, priority: '1')
 ```
 
 ### WAIT EVENT
@@ -173,7 +179,7 @@ Attendand transfer
 Wait for an event to occur. Timeout in seconds to wait for events, -1 means forever
 
 ```ruby
- wait_event(timeout=-1)
+ @ami.wait_event(timeout: -1)
 ```
 
 ### MONITOR
@@ -181,7 +187,7 @@ Wait for an event to occur. Timeout in seconds to wait for events, -1 means fore
 Monitor a channel
 
 ```ruby
- monitor(channel,mix=false,file=nil,format='wav')
+ @ami.monitor(channel, mix: false, file: nil, format: 'wav')
 ```
 
 ### STOP MONITOR
@@ -189,7 +195,7 @@ Monitor a channel
 Stop monitoring a channel
 
 ```ruby
- stop_monitor(channel)
+ @ami.stop_monitor(channel)
 ```
 
 ### PAUSE MONITOR
@@ -197,7 +203,7 @@ Stop monitoring a channel
 Pause monitoring of a channel
 
 ```ruby
- pause_monitor(channel)
+ @ami.pause_monitor(channel)
 ```
 
 ### UNPAUSE MONITOR
@@ -205,7 +211,7 @@ Pause monitoring of a channel
 Unpause monitoring of a channel
 
 ```ruby
- unpause_monitor(channel)
+ @ami.unpause_monitor(channel)
 ```
 
 ### CHANGE MONITOR
@@ -213,7 +219,15 @@ Unpause monitoring of a channel
 Change monitoring filename of a channel
 
 ```ruby
- change_monitor(channel,file)
+ @ami.change_monitor(channel: channel, file: file)
+```
+
+### DISCONNECT
+
+To close the connection and stop the Ractor:
+
+```ruby
+ @ami.disconnect
 ```
 
 ### THE RESPONSE OBJECT
@@ -234,4 +248,3 @@ The data property contains all additional information obtained from Asterisk, li
 Questions or problems? Please post them on the [issue tracker](https://github.com/emilianodellacasa/ruby-asterisk/issues). You can contribute changes by forking the project and submitting a pull request. You can ensure the tests passing by running `bundle` and `rake`.
 
 This gem is created by Emiliano Della Casa and is under the MIT License and it is distributed by courtesy of [Engim srl](http://www.engim.eu/en).
-

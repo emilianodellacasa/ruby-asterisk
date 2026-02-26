@@ -8,13 +8,20 @@ module RubyAsterisk
       # System commands
       #
       module System
-        def login(username:, secret:)
-          connect unless connected
-          execute 'Login', { 'Username' => username, 'Secret' => secret, 'Event' => 'On' }
+        def parked_calls
+          execute 'ParkedCalls'
         end
 
-        def logoff
-          execute 'Logoff'
+        def device_state_list
+          execute 'DeviceStateList'
+        end
+
+        def skinny_devices
+          execute 'SKINNYdevices'
+        end
+
+        def skinny_lines
+          execute 'SKINNYlines'
         end
 
         def ping
@@ -25,13 +32,13 @@ module RubyAsterisk
           execute 'Events', { 'EventMask' => event_mask }
         end
 
-        def command(command)
-          execute 'Command', { 'Command' => command }
-        end
-
         def wait_event(timeout: -1)
           @timeout = [@timeout, timeout].max
           execute 'WaitEvent', { 'Timeout' => timeout }
+        end
+
+        def command(command)
+          execute 'Command', { 'Command' => command }
         end
       end
     end

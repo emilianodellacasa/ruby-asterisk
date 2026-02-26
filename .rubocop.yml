@@ -77,3 +77,7 @@ Metrics/AbcSize:
 Naming/PredicateMethod:
   Exclude:
     - 'lib/ruby-asterisk/response.rb'
+
+Lint/SuppressedException:
+  Exclude:
+    - 'spec/support/mock_ami_server.rb'
