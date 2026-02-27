@@ -9,12 +9,16 @@ require 'ruby-asterisk/response_builder'
 Dir[File.join(File.dirname(__FILE__), 'commands', '*.rb')].each { |file| require file }
 
 require 'ruby-asterisk/ami/socket_reader_ractor'
+require 'ruby-asterisk/ami/parser_ractor'
 require 'timeout'
 
 module RubyAsterisk
   module AMI
     ##
-    # Ruby-asterisk main classes
+    # Ruby-asterisk main class.
+    #
+    # Data pipeline:
+    #   SocketReaderRactor  -->  ParserRactor  -->  Client (Ractor.current)
     #
     class Client
       include Commands::System
@@ -29,18 +33,20 @@ module RubyAsterisk
       attr_accessor :host, :port, :connected, :timeout, :wait_time
 
       def initialize(host:, port:)
-        self.host = host.to_s
-        self.port = port.to_i
+        self.host      = host.to_s
+        self.port      = port.to_i
         self.connected = false
-        @timeout = 5
-        @wait_time = 0.1
-        @reader_ractor = nil
-        @response_buffer = +''
+        @timeout           = 5
+        @wait_time         = 0.1
+        @reader_ractor     = nil
+        @parser_ractor     = nil
+        @pending_responses = []
       end
 
       def connect
+        @parser_ractor = ParserRactor.new(Ractor.current)
         @reader_ractor = SocketReaderRactor.new(host, port)
-        @reader_ractor.start(consumer: Ractor.current)
+        @reader_ractor.start(consumer: @parser_ractor.input)
         handle_connection_message
       rescue StandardError => e
         puts "Connection error: #{e.message}"
@@ -51,6 +57,10 @@ module RubyAsterisk
       def disconnect
         @reader_ractor&.stop
         @reader_ractor = nil
+
+        @parser_ractor&.stop
+        @parser_ractor = nil
+
         self.connected = false
         true
       rescue StandardError => e
@@ -72,7 +82,7 @@ module RubyAsterisk
         request.commands.each { |cmd| @reader_ractor.write(cmd) }
         response_data = wait_for_response(request.action_id)
         ResponseBuilder.new.tap do |builder|
-          builder.type = command
+          builder.type         = command
           builder.raw_response = response_data
         end.build
       end
@@ -114,21 +124,20 @@ module RubyAsterisk
 
       def wait_for_response(action_id)
         start_time = Time.now
-        pattern = /ActionID: #{Regexp.escape(action_id)}.*?\r\n\r\n/m
+
+        if (idx = @pending_responses.index { |m| m[:action_id] == action_id })
+          return @pending_responses.delete_at(idx)[:raw]
+        end
+
         loop do
-          if (match = @response_buffer.match(pattern))
-            return extract_response_from_buffer(match)
-          end
           raise "Timeout waiting for response (ActionID: #{action_id})" if Time.now - start_time > @timeout
 
           wait_for_more_data(start_time)
-        end
-      end
 
-      def extract_response_from_buffer(match)
-        response_data = match[0]
-        @response_buffer.sub!(response_data, '')
-        response_data
+          if (idx = @pending_responses.index { |m| m[:action_id] == action_id })
+            return @pending_responses.delete_at(idx)[:raw]
+          end
+        end
       end
 
       def wait_for_more_data(start_time)
@@ -141,8 +150,10 @@ module RubyAsterisk
 
       def process_incoming_message(msg)
         case msg[:type]
-        when :data
-          @response_buffer << msg[:data]
+        when :response
+          @pending_responses << msg
+        when :event
+          # Async events received outside of a command cycle — ignored for now.
         when :error
           raise "Error from Ractor: #{msg[:message]}"
         when :disconnected
