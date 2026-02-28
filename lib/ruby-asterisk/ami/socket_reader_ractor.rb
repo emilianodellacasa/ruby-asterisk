@@ -15,11 +15,11 @@ module RubyAsterisk
         consumer.send({ type: :data, data: chunk.freeze }.freeze)
       end
     rescue EOFError
-      consumer.send({ type: :disconnected, reason: 'EOF from server' }.freeze) rescue nil
+      safe_send(consumer, { type: :disconnected, reason: 'EOF from server' }.freeze)
     rescue IOError, Errno::EBADF
       # Socket was closed from stop command — exit silently without notifying consumer
     rescue StandardError => e
-      consumer.send({ type: :error, message: e.message }.freeze) rescue nil
+      safe_send(consumer, { type: :error, message: e.message }.freeze)
     end
 
     # Handles write commands and stop signal from the main Ractor.
@@ -41,7 +41,7 @@ module RubyAsterisk
     def self.handle_write(socket, consumer, msg)
       socket.write(msg[:data])
     rescue StandardError => e
-      consumer.send({ type: :error, message: "Write failed: #{e.message}" }.freeze) rescue nil
+      safe_send(consumer, { type: :error, message: "Write failed: #{e.message}" }.freeze)
     end
 
     def self.close_socket(socket)
@@ -50,30 +50,37 @@ module RubyAsterisk
       nil
     end
 
+    def self.safe_send(consumer, msg)
+      consumer.send(msg)
+    rescue StandardError
+      nil
+    end
+
+    def self.connect_and_loop(host, port, consumer)
+      socket = nil
+      reader_thread = nil
+
+      begin
+        socket = TCPSocket.new(host, port)
+        socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+        consumer.send({ type: :connected, host: host, port: port }.freeze)
+
+        reader_thread = Thread.new { SocketReaderRactor.reader_loop(socket, consumer) }
+        SocketReaderRactor.writer_loop(socket, consumer, reader_thread)
+      rescue StandardError => e
+        safe_send(consumer, { type: :error, message: "Connection failed: #{e.message}" }.freeze)
+      ensure
+        SocketReaderRactor.close_socket(socket) if socket
+        reader_thread&.join(1)
+      end
+    end
+
     RACTOR_LOGIC = proc do
       loop do
         message = Ractor.receive
         next unless message[:type] == :connect
 
-        h = message[:host]
-        p = message[:port]
-        consumer = message[:consumer]
-        socket = nil
-        reader_thread = nil
-
-        begin
-          socket = TCPSocket.new(h, p)
-          socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
-          consumer.send({ type: :connected, host: h, port: p }.freeze)
-
-          reader_thread = Thread.new { SocketReaderRactor.reader_loop(socket, consumer) }
-          SocketReaderRactor.writer_loop(socket, consumer, reader_thread)
-        rescue StandardError => e
-          consumer.send({ type: :error, message: "Connection failed: #{e.message}" }.freeze) rescue nil
-        ensure
-          SocketReaderRactor.close_socket(socket) if socket
-          reader_thread&.join(1)
-        end
+        SocketReaderRactor.connect_and_loop(message[:host], message[:port], message[:consumer])
         break
       end
     end
