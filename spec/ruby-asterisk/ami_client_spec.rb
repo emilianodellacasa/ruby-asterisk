@@ -56,17 +56,23 @@ RSpec.describe RubyAsterisk::AMI::Client do
   end
 
   describe '#login' do
-    it 'logs in successfully' do
-      expect(client.login(username: 'admin', secret: 'secret')).to be_truthy
+    it 'logs in and returns a Promise that resolves to a successful Response' do
+      promise = client.login(username: 'admin', secret: 'secret')
+      expect(promise).to be_a(RubyAsterisk::AMI::Promise)
+      response = promise.value(2)
+      expect(response.success).to be true
       client.disconnect
     end
   end
 
   describe '#ping' do
-    it 'sends ping and receives pong' do
+    it 'returns a Promise that resolves to a successful Response' do
       client.connect
-      response = client.ping
+      promise = client.ping
+      expect(promise).to be_a(RubyAsterisk::AMI::Promise)
+      response = promise.value(2)
       expect(response).not_to be_nil
+      expect(response.success).to be true
       client.disconnect
     end
   end

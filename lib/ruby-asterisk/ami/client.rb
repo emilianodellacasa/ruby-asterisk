@@ -4,6 +4,7 @@ require 'ruby-asterisk/version'
 require 'ruby-asterisk/request'
 require 'ruby-asterisk/response'
 require 'ruby-asterisk/response_builder'
+require 'ruby-asterisk/ami/promise'
 
 # Commands
 Dir[File.join(File.dirname(__FILE__), 'commands', '*.rb')].each { |file| require file }
@@ -15,10 +16,19 @@ require 'timeout'
 module RubyAsterisk
   module AMI
     ##
-    # Ruby-asterisk main class.
+    # Asynchronous AMI client.
+    #
+    # {#execute} registers a {Promise} for the outgoing command and writes it
+    # to the socket, returning the Promise *immediately* without blocking.
+    # A background event-loop thread receives parsed messages from the
+    # {ParserRactor} and resolves (or rejects) each pending Promise.
+    #
+    # Callers obtain the response by calling {Promise#value} on the returned
+    # Promise, which blocks only until the matching reply arrives (or a
+    # per-command timeout fires).
     #
     # Data pipeline:
-    #   SocketReaderRactor  -->  ParserRactor  -->  Client (Ractor.current)
+    #   SocketReaderRactor  -->  ParserRactor  -->  Client event-loop thread
     #
     class Client
       include Commands::System
@@ -40,9 +50,14 @@ module RubyAsterisk
         @wait_time         = 0.1
         @reader_ractor     = nil
         @parser_ractor     = nil
-        @pending_responses = []
+        @promises          = {}
+        @promises_mutex    = Mutex.new
+        @event_loop_thread = nil
       end
 
+      # Connect to the Asterisk AMI server and start the async event loop.
+      #
+      # @return [true, false]
       def connect
         @parser_ractor = ParserRactor.new(Ractor.current)
         @reader_ractor = SocketReaderRactor.new(host, port)
@@ -54,13 +69,13 @@ module RubyAsterisk
         false
       end
 
+      # Disconnect from Asterisk, stop the event loop, and reject any pending promises.
+      #
+      # @return [true, false]
       def disconnect
-        @reader_ractor&.stop
-        @reader_ractor = nil
-
-        @parser_ractor&.stop
-        @parser_ractor = nil
-
+        stop_event_loop
+        teardown_ractors
+        reject_all_promises(RuntimeError.new('Client disconnected'))
         self.connected = false
         true
       rescue StandardError => e
@@ -77,23 +92,36 @@ module RubyAsterisk
         execute 'Logoff'
       end
 
+      ##
+      # Send an AMI command asynchronously.
+      #
+      # Registers a {Promise}, writes the command to the socket, and returns
+      # immediately.  The Promise is resolved by the event-loop thread when
+      # Asterisk sends a matching response.
+      #
+      # @param command [String]  AMI action name (e.g. 'Ping', 'Login')
+      # @param options [Hash]    additional AMI headers
+      # @return [Promise]        call {Promise#value} to obtain the {Response}
       def execute(command, options = {})
         request = Request.new(command, options)
+        promise = Promise.new(action_id: request.action_id, command_type: command, timeout: @timeout)
+        @promises_mutex.synchronize { @promises[request.action_id] = promise }
         request.commands.each { |cmd| @reader_ractor.write(cmd) }
-        response_data = wait_for_response(request.action_id)
-        ResponseBuilder.new.tap do |builder|
-          builder.type         = command
-          builder.raw_response = response_data
-        end.build
+        promise
       end
 
       private
+
+      # -------------------------------------------------------------------------
+      # Connection setup
+      # -------------------------------------------------------------------------
 
       def handle_connection_message
         msg = Timeout.timeout(@timeout) { Ractor.receive }
         if msg[:type] == :connected
           self.connected = true
           consume_until_idle
+          start_event_loop
           return true
         end
         handle_connection_error(msg)
@@ -111,54 +139,79 @@ module RubyAsterisk
         self.connected = false
       end
 
+      # Drain any initial messages (e.g. AMI banner events) that arrive right
+      # after the connection is established, before the event loop starts.
       def consume_until_idle(idle_time = 0.5)
         last_message_time = Time.now
         loop do
           msg = Timeout.timeout(0.05) { Ractor.receive }
-          process_incoming_message(msg)
+          dispatch_message(msg)
           last_message_time = Time.now
         rescue Timeout::Error
           break if Time.now - last_message_time > idle_time
         end
       end
 
-      def wait_for_response(action_id)
-        start_time = Time.now
+      # -------------------------------------------------------------------------
+      # Event loop
+      # -------------------------------------------------------------------------
 
-        if (idx = @pending_responses.index { |m| m[:action_id] == action_id })
-          return @pending_responses.delete_at(idx)[:raw]
-        end
+      def start_event_loop
+        @event_loop_thread = Thread.new do
+          loop do
+            msg = Ractor.receive
+            break if msg[:type] == :stop
 
-        loop do
-          raise "Timeout waiting for response (ActionID: #{action_id})" if Time.now - start_time > @timeout
-
-          wait_for_more_data(start_time)
-
-          if (idx = @pending_responses.index { |m| m[:action_id] == action_id })
-            return @pending_responses.delete_at(idx)[:raw]
+            dispatch_message(msg)
           end
         end
       end
 
-      def wait_for_more_data(start_time)
-        wait_remaining = @timeout - (Time.now - start_time)
-        msg = Timeout.timeout([wait_remaining, @wait_time].min) { Ractor.receive }
-        process_incoming_message(msg)
-      rescue Timeout::Error
-        # Loop again
+      # Send a sentinel :stop into Ractor.current's inbox so the event-loop
+      # thread unblocks and exits cleanly.
+      def stop_event_loop
+        return unless @event_loop_thread&.alive?
+
+        Ractor.current.send({ type: :stop }.freeze)
+        @event_loop_thread.join(1)
+        @event_loop_thread = nil
       end
 
-      def process_incoming_message(msg)
+      def teardown_ractors
+        @reader_ractor&.stop
+        @reader_ractor = nil
+
+        @parser_ractor&.stop
+        @parser_ractor = nil
+      end
+
+      # -------------------------------------------------------------------------
+      # Message dispatch
+      # -------------------------------------------------------------------------
+
+      def dispatch_message(msg)
         case msg[:type]
         when :response
-          @pending_responses << msg
+          resolve_promise(msg[:action_id], msg[:raw])
         when :event
           # Async events received outside of a command cycle — ignored for now.
         when :error
-          raise "Error from Ractor: #{msg[:message]}"
+          reject_all_promises(RuntimeError.new("Error from Ractor: #{msg[:message]}"))
         when :disconnected
-          raise "Disconnected: #{msg[:reason]}"
+          reject_all_promises(RuntimeError.new("Disconnected: #{msg[:reason]}"))
         end
+      end
+
+      def resolve_promise(action_id, raw_data)
+        promise = @promises_mutex.synchronize { @promises.delete(action_id) }
+        promise&.resolve(raw_data)
+      end
+
+      def reject_all_promises(error)
+        promises = @promises_mutex.synchronize do
+          @promises.values.tap { @promises.clear }
+        end
+        promises.each { |p| p.reject(error) }
       end
     end
   end
