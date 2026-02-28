@@ -105,7 +105,7 @@ module RubyAsterisk
         @ractor.send(msg.freeze)
       end
 
-      # Stop the parser Ractor gracefully.
+      # Stop the parser Ractor gracefully and wait for it to terminate.
       def stop
         @ractor.send({ type: :stop }.freeze)
       end
