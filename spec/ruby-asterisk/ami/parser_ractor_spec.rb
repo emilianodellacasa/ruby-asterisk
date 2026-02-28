@@ -19,10 +19,14 @@ RSpec.describe RubyAsterisk::AMI::ParserRactor do
 
   # ── setup / teardown ───────────────────────────────────────────────────────
 
-  before { flush_mailbox }
-  after  { flush_mailbox }
-
   subject(:parser) { described_class.new(Ractor.current) }
+
+  before { flush_mailbox }
+
+  after do
+    flush_mailbox
+    parser.stop
+  end
 
   # ── Acceptance Criterion 1: fragmented packets ────────────────────────────
 
