@@ -61,17 +61,18 @@ RSpec.describe RubyAsterisk::SocketReaderRactor do
   end
 
   after do
+    @reader&.stop rescue nil
     @server_thread&.kill
     flush_mailbox
   end
 
   describe '#start' do
     it 'connects to the server' do
-      reader = described_class.new('localhost', @port)
-      reader.start # uses Ractor.current
+      @reader = described_class.new('localhost', @port)
+      @reader.start # uses Ractor.current
 
       # Expect connected message
-      msg = reader.take # uses Ractor.receive
+      msg = @reader.take # uses Ractor.receive
       expect(msg[:type]).to eq(:connected)
       expect(msg[:host]).to eq('localhost')
       expect(msg[:port]).to eq(@port)
@@ -80,29 +81,29 @@ RSpec.describe RubyAsterisk::SocketReaderRactor do
 
   describe '#read_loop' do
     it 'reads data chunks' do
-      reader = described_class.new('localhost', @port)
-      reader.start
+      @reader = described_class.new('localhost', @port)
+      @reader.start
 
       # Get welcome message (AMI server default behavior)
-      msg = reader.take # :connected
+      msg = @reader.take # :connected
       expect(msg[:type]).to eq(:connected)
 
       # Wait for data (Mock server sends "Asterisk Call Manager/1.1")
-      msg = reader.take
+      msg = @reader.take
       expect(msg[:type]).to eq(:data)
       expect(msg[:data]).to match(/Asterisk Call Manager/)
     end
 
     it 'handles EOF gracefully' do
-      reader = described_class.new('localhost', @port)
-      reader.start
+      @reader = described_class.new('localhost', @port)
+      @reader.start
 
-      msg = reader.take
+      msg = @reader.take
       expect(msg[:type]).to eq(:connected)
 
       # Consume data until we are sure server is idle or we kill it
       # Consume at least one data packet (welcome)
-      msg = reader.take
+      msg = @reader.take
       expect(msg[:type]).to eq(:data)
 
       # Server disconnects
@@ -110,7 +111,7 @@ RSpec.describe RubyAsterisk::SocketReaderRactor do
 
       # We need to wait for the socket close to propagate
       loop do
-        msg = reader.take
+        msg = @reader.take
         break if msg[:type] == :disconnected
         # If we get :timeout, loop will raise Timeout::Error or check type
         raise 'Timeout waiting for disconnected' if msg[:type] == :timeout

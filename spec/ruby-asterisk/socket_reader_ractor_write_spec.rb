@@ -20,6 +20,7 @@ RSpec.describe RubyAsterisk::SocketReaderRactor do
   end
 
   after do
+    @reader&.stop rescue nil
     @server_thread&.kill
     flush_mailbox
   end
@@ -36,13 +37,13 @@ RSpec.describe RubyAsterisk::SocketReaderRactor do
         end
       end
 
-      reader = described_class.new('localhost', @port)
-      reader.start
+      @reader = described_class.new('localhost', @port)
+      @reader.start
 
-      msg = reader.take
+      msg = @reader.take
       expect(msg[:type]).to eq(:connected)
 
-      reader.write("Test Command\n")
+      @reader.write("Test Command\n")
 
       received = Timeout.timeout(2) { received_data.pop }
       expect(received).to eq('Test Command')
