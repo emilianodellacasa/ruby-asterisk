@@ -7,19 +7,23 @@ module RubyAsterisk
   class SocketReaderRactor
     attr_reader :host, :port
 
-    # Defines the reader thread logic
+    # Reads data from the socket and forwards chunks to the consumer.
+    # Exits when the socket is closed or EOF is reached.
     def self.reader_loop(socket, consumer)
       loop do
         chunk = socket.readpartial(4096)
         consumer.send({ type: :data, data: chunk.freeze }.freeze)
       end
     rescue EOFError
-      consumer.send({ type: :disconnected, reason: 'EOF from server' }.freeze)
+      consumer.send({ type: :disconnected, reason: 'EOF from server' }.freeze) rescue nil
+    rescue IOError, Errno::EBADF
+      # Socket was closed from stop command — exit silently without notifying consumer
     rescue StandardError => e
-      consumer.send({ type: :error, message: e.message }.freeze)
+      consumer.send({ type: :error, message: e.message }.freeze) rescue nil
     end
 
-    # Defines the main writer/control loop logic
+    # Handles write commands and stop signal from the main Ractor.
+    # Closing the socket on :stop unblocks reader_loop's readpartial call.
     def self.writer_loop(socket, consumer, reader_thread)
       loop do
         msg = Ractor.receive
@@ -27,8 +31,8 @@ module RubyAsterisk
         when :write
           handle_write(socket, consumer, msg)
         when :stop
-          reader_thread&.kill
-          close_socket(socket)
+          close_socket(socket)      # unblocks reader_loop's readpartial
+          reader_thread&.join(2)    # wait for reader_loop to exit cleanly
           break
         end
       end
@@ -37,7 +41,7 @@ module RubyAsterisk
     def self.handle_write(socket, consumer, msg)
       socket.write(msg[:data])
     rescue StandardError => e
-      consumer.send({ type: :error, message: "Write failed: #{e.message}" }.freeze)
+      consumer.send({ type: :error, message: "Write failed: #{e.message}" }.freeze) rescue nil
     end
 
     def self.close_socket(socket)
@@ -64,15 +68,16 @@ module RubyAsterisk
 
           reader_thread = Thread.new { SocketReaderRactor.reader_loop(socket, consumer) }
           SocketReaderRactor.writer_loop(socket, consumer, reader_thread)
-          break
         rescue StandardError => e
-          consumer.send({ type: :error, message: "Connection failed: #{e.message}" }.freeze)
+          consumer.send({ type: :error, message: "Connection failed: #{e.message}" }.freeze) rescue nil
         ensure
-          reader_thread&.kill
           SocketReaderRactor.close_socket(socket) if socket
+          reader_thread&.join(1)
         end
+        break
       end
     end
+
     def initialize(host, port)
       @host = host
       @port = port
@@ -96,6 +101,9 @@ module RubyAsterisk
 
     def stop
       @pipe.send({ type: :stop }.freeze)
+      @pipe.take
+    rescue Ractor::ClosedError, Ractor::RemoteError
+      nil
     end
   end
 end
