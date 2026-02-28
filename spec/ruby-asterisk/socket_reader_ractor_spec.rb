@@ -61,7 +61,11 @@ RSpec.describe RubyAsterisk::SocketReaderRactor do
   end
 
   after do
-    @reader&.stop rescue nil
+    begin
+      @reader&.stop
+    rescue StandardError
+      nil
+    end
     @server_thread&.kill
     flush_mailbox
   end
