@@ -108,9 +108,6 @@ module RubyAsterisk
 
     def stop
       @pipe.send({ type: :stop }.freeze)
-      @pipe.take
-    rescue Ractor::ClosedError, Ractor::RemoteError
-      nil
     end
   end
 end
