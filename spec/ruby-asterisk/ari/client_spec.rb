@@ -124,6 +124,30 @@ RSpec.describe RubyAsterisk::ARI::Client do
     end
   end
 
+  describe '#channels' do
+    it 'returns a Collection for Channel resources' do
+      expect(client.channels).to be_a(RubyAsterisk::ARI::Resources::Collection)
+    end
+  end
+
+  describe '#bridges' do
+    it 'returns a Collection for Bridge resources' do
+      expect(client.bridges).to be_a(RubyAsterisk::ARI::Resources::Collection)
+    end
+  end
+
+  describe '#playbacks' do
+    it 'returns a Collection for Playback resources' do
+      expect(client.playbacks).to be_a(RubyAsterisk::ARI::Resources::Collection)
+    end
+  end
+
+  describe '#endpoints' do
+    it 'returns a Collection for Endpoint resources' do
+      expect(client.endpoints).to be_a(RubyAsterisk::ARI::Resources::Collection)
+    end
+  end
+
   describe '#asterisk_info' do
     let(:info_payload) do
       { 'build' => { 'os' => 'Linux' }, 'system' => { 'entity_id' => 'asterisk' } }.to_json

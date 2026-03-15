@@ -243,6 +243,116 @@ The response object contains all information about all data received from Asteri
 
 The data property contains all additional information obtained from Asterisk, like for example the list of active channels after a "core show channels" command.
 
+## ARI (Asterisk REST Interface)
+
+Version 0.3.0+ adds an HTTP client for the [Asterisk REST Interface (ARI)](https://wiki.asterisk.org/wiki/display/AST/Getting+Started+with+ARI), which provides fine-grained, real-time call control via a REST API.
+
+### INITIALIZE ARI CLIENT
+
+```ruby
+require 'ruby-asterisk'
+
+client = RubyAsterisk::ARI::Client.new(
+  'http://192.168.1.1:8088', # ARI base URL
+  'my_api_key',              # ARI API key (username; password is empty by default)
+  'my_stasis_app'            # Stasis application name
+)
+```
+
+### ASTERISK INFO
+
+```ruby
+info = client.asterisk_info
+# => Hash with build, system, config, status sections
+puts info['system']['version']
+```
+
+### CHANNELS
+
+Fetch a single channel by ID:
+
+```ruby
+channel = client.channels.get('1553112062.1')
+puts channel.id          # => "1553112062.1"
+puts channel.data['name'] # => "PJSIP/alice-00000001"
+```
+
+List all active channels:
+
+```ruby
+channels = client.channels.list
+channels.each { |ch| puts ch.data['name'] }
+```
+
+Call control actions on a channel:
+
+```ruby
+channel.ring     # send ringing indication
+channel.answer   # answer the call
+channel.play('sound:hello-world')              # play audio
+channel.play('sound:tt-monkeys', playbackId: 'pb-1') # play with options
+channel.hangup   # hang up and destroy the channel
+```
+
+### BRIDGES
+
+Create or fetch a bridge, then mix channels into it:
+
+```ruby
+# List all bridges
+bridges = client.bridges.list
+
+# Fetch a specific bridge by ID
+bridge = client.bridges.get('my-bridge-id')
+
+# Add a channel to the bridge
+bridge.add_channel('1553112062.1')
+
+# Remove a channel from the bridge
+bridge.remove_channel('1553112062.1')
+
+# Destroy the bridge
+bridge.destroy
+```
+
+### PLAYBACKS
+
+Control in-progress media playbacks:
+
+```ruby
+playback = client.playbacks.get('pb-1')
+
+playback.control('pause')    # pause media
+playback.control('unpause')  # resume media
+playback.control('restart')  # restart from beginning
+playback.stop                # stop and destroy the playback
+```
+
+### ENDPOINTS
+
+Inspect registered endpoints:
+
+```ruby
+endpoints = client.endpoints.list
+endpoints.each do |ep|
+  puts "#{ep.technology}/#{ep.resource} — #{ep.state}"
+end
+# => PJSIP/alice — online
+# => PJSIP/bob   — offline
+```
+
+### ERROR HANDLING
+
+All ARI methods raise `RubyAsterisk::Error` on HTTP 4xx/5xx responses:
+
+```ruby
+begin
+  channel = client.channels.get('nonexistent-id')
+rescue RubyAsterisk::Error => e
+  puts e.message  # => "Channel not found"
+end
+```
+
 ## Development
 
 Questions or problems? Please post them on the [issue tracker](https://github.com/emilianodellacasa/ruby-asterisk/issues). You can contribute changes by forking the project and submitting a pull request. You can ensure the tests passing by running `bundle` and `rake`.
