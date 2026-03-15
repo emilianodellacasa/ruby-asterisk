@@ -2,6 +2,12 @@
 
 require 'faraday'
 require 'json'
+require 'ruby-asterisk/ari/resources/base'
+require 'ruby-asterisk/ari/resources/channel'
+require 'ruby-asterisk/ari/resources/bridge'
+require 'ruby-asterisk/ari/resources/playback'
+require 'ruby-asterisk/ari/resources/endpoint'
+require 'ruby-asterisk/ari/resources/collection'
 
 module RubyAsterisk
   module ARI
@@ -38,6 +44,22 @@ module RubyAsterisk
 
       def asterisk_info
         get('/ari/asterisk/info')
+      end
+
+      def channels
+        Resources::Collection.new(Resources::Channel, '/ari/channels', self)
+      end
+
+      def bridges
+        Resources::Collection.new(Resources::Bridge, '/ari/bridges', self)
+      end
+
+      def playbacks
+        Resources::Collection.new(Resources::Playback, '/ari/playbacks', self)
+      end
+
+      def endpoints
+        Resources::Collection.new(Resources::Endpoint, '/ari/endpoints', self)
       end
 
       private
