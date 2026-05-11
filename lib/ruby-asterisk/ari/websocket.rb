@@ -5,12 +5,16 @@ require 'eventmachine'
 require 'json'
 require 'uri'
 require 'logger'
+require_relative 'websocket/connection'
+require_relative 'websocket/event_handlers'
 
 module RubyAsterisk
   module ARI
     # WebSocket client for ARI events
     # Connects to the Asterisk ARI WebSocket endpoint to receive real-time events
     class WebSocket
+      include Connection
+      include EventHandlers
       attr_reader :url, :app_name, :callbacks, :connected
 
       # Ping interval in seconds to keep connection alive
@@ -115,156 +119,6 @@ module RubyAsterisk
         true
       end
 
-      private
-
-      # Build the WebSocket URL
-      #
-      # @return [String]
-      def build_url
-        uri = URI.parse(@base_url)
-        ws_scheme = uri.scheme == 'https' ? 'wss' : 'ws'
-        auth = "#{@api_key}:@"
-
-        "#{ws_scheme}://#{auth}#{uri.host}:#{uri.port}/ari/events?app=#{@app_name}"
-      end
-
-      # Establish WebSocket connection
-      def establish_connection
-        @logger.info "Connecting to ARI WebSocket: app=#{@app_name}"
-
-        url = build_url
-        @ws = Faye::WebSocket::Client.new(url)
-
-        setup_event_handlers
-      rescue StandardError => e
-        @logger.error "Failed to establish connection: #{e.message}"
-        schedule_reconnect
-      end
-
-      # Setup WebSocket event handlers
-      def setup_event_handlers
-        @ws.on :open do |_event|
-          handle_open
-        end
-
-        @ws.on :message do |event|
-          handle_message(event)
-        end
-
-        @ws.on :close do |event|
-          handle_close(event)
-        end
-
-        @ws.on :error do |event|
-          handle_error(event)
-        end
-      end
-
-      # Handle WebSocket open event
-      def handle_open
-        @connected = true
-        @reconnect_attempts = 0
-        @logger.info 'WebSocket connected successfully'
-
-        start_ping_timer
-        @on_connect_callback&.call(self)
-      end
-
-      # Handle incoming WebSocket message
-      #
-      # @param event [Faye::WebSocket::API::Event]
-      def handle_message(event)
-        data = JSON.parse(event.data)
-        event_type = data['type']
-
-        @logger.debug "Received event: #{event_type}"
-
-        # Dispatch to registered callbacks
-        dispatch_event(event_type, data)
-      rescue JSON::ParserError => e
-        @logger.error "Failed to parse message: #{e.message}"
-      end
-
-      # Handle WebSocket close event
-      #
-      # @param event [Faye::WebSocket::API::Event]
-      def handle_close(event)
-        @connected = false
-        stop_ping_timer
-
-        @logger.warn "WebSocket closed: code=#{event.code}, reason=#{event.reason}"
-
-        schedule_reconnect if @should_reconnect
-      end
-
-      # Handle WebSocket error event
-      #
-      # @param event [Faye::WebSocket::API::Event]
-      def handle_error(event)
-        @logger.error "WebSocket error: #{event.message}"
-      end
-
-      # Dispatch event to registered callbacks
-      #
-      # @param event_type [String] Event type
-      # @param data [Hash] Event data
-      def dispatch_event(event_type, data)
-        # Call specific event handlers
-        @callbacks[event_type]&.each do |callback|
-          callback.call(data)
-        rescue StandardError => e
-          @logger.error "Error in event handler for #{event_type}: #{e.message}"
-        end
-
-        # Call wildcard handlers (if registered with '*')
-        @callbacks['*']&.each do |callback|
-          callback.call(data)
-        rescue StandardError => e
-          @logger.error "Error in wildcard event handler: #{e.message}"
-        end
-      end
-
-      # Start the ping timer to keep connection alive
-      def start_ping_timer
-        stop_ping_timer
-
-        @ping_timer = EM::PeriodicTimer.new(@ping_interval) do
-          if connected?
-            @logger.debug 'Sending ping'
-            @ws.ping
-          end
-        end
-      end
-
-      # Stop the ping timer
-      def stop_ping_timer
-        @ping_timer&.cancel
-        @ping_timer = nil
-      end
-
-      # Schedule a reconnection attempt
-      def schedule_reconnect
-        return unless @should_reconnect
-
-        if MAX_RECONNECT_ATTEMPTS && @reconnect_attempts >= MAX_RECONNECT_ATTEMPTS
-          @logger.error 'Max reconnection attempts reached, giving up'
-          return
-        end
-
-        @reconnect_attempts += 1
-        @logger.info "Scheduling reconnection attempt #{@reconnect_attempts} in #{@reconnect_delay} seconds"
-
-        stop_reconnect_timer
-        @reconnect_timer = EM::Timer.new(@reconnect_delay) do
-          establish_connection
-        end
-      end
-
-      # Stop the reconnect timer
-      def stop_reconnect_timer
-        @reconnect_timer&.cancel
-        @reconnect_timer = nil
-      end
     end
   end
 end
