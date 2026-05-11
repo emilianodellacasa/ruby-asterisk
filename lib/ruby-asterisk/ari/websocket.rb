@@ -15,6 +15,7 @@ module RubyAsterisk
     class WebSocket
       include Connection
       include EventHandlers
+
       attr_reader :url, :app_name, :callbacks, :connected
 
       # Ping interval in seconds to keep connection alive
@@ -111,14 +112,13 @@ module RubyAsterisk
       #
       # @param message [Hash, String] Message to send (will be converted to JSON if Hash)
       # @return [Boolean] true if sent successfully
-      def send_message(message)
+      def send_message?(message)
         return false unless connected?
 
         data = message.is_a?(Hash) ? JSON.generate(message) : message
         @ws.send(data)
         true
       end
-
     end
   end
 end

@@ -108,10 +108,10 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
     end
   end
 
-  describe '#send_message' do
+  describe '#send_message?' do
     context 'when not connected' do
       it 'returns false' do
-        expect(websocket.send_message('test')).to be(false)
+        expect(websocket.send_message?('test')).to be(false)
       end
     end
 
@@ -124,17 +124,17 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
       end
 
       it 'sends string message' do
-        websocket.send_message('test message')
+        websocket.send_message?('test message')
         expect(ws).to have_received(:send).with('test message')
       end
 
       it 'converts hash to JSON' do
-        websocket.send_message({ type: 'test', data: 'value' })
+        websocket.send_message?({ type: 'test', data: 'value' })
         expect(ws).to have_received(:send).with('{"type":"test","data":"value"}')
       end
 
       it 'returns true' do
-        expect(websocket.send_message('test')).to be(true)
+        expect(websocket.send_message?('test')).to be(true)
       end
     end
   end
