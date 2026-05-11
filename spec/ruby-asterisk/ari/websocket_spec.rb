@@ -260,7 +260,7 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
 
   describe 'private #handle_message' do
     let(:event_json) { '{"type":"StasisStart","channel":{"id":"123"}}' }
-    let(:event) { instance_double(Faye::WebSocket::API::Event, data: event_json) }
+    let(:event) { double('Faye::WebSocket::API::Event', data: event_json) }
 
     it 'parses JSON and dispatches event' do
       called = false
@@ -277,7 +277,7 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
     end
 
     it 'logs error for invalid JSON' do
-      invalid_event = instance_double(Faye::WebSocket::API::Event, data: 'invalid json')
+      invalid_event = double('Faye::WebSocket::API::Event', data: 'invalid json')
 
       websocket.send(:handle_message, invalid_event)
 
@@ -323,7 +323,7 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
   end
 
   describe 'private #handle_close' do
-    let(:event) { instance_double(Faye::WebSocket::API::Event, code: 1000, reason: 'Normal closure') }
+    let(:event) { double('Faye::WebSocket::API::Event', code: 1000, reason: 'Normal closure') }
 
     before do
       websocket.instance_variable_set(:@connected, true)
@@ -359,7 +359,7 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
   end
 
   describe 'private #handle_error' do
-    let(:event) { instance_double(Faye::WebSocket::API::Event, message: 'Connection failed') }
+    let(:event) { double('Faye::WebSocket::API::Event', message: 'Connection failed') }
 
     it 'logs error message' do
       websocket.send(:handle_error, event)

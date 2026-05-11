@@ -105,7 +105,7 @@ module RubyAsterisk
       #
       # @return [Boolean]
       def connected?
-        @connected && @ws && @ws.ready_state == Faye::WebSocket::API::OPEN
+        !!(@connected && @ws && @ws.ready_state == Faye::WebSocket::API::OPEN)
       end
 
       # Send a message through the WebSocket
