@@ -6,6 +6,11 @@ require 'async'
 require_relative 'session'
 require_relative '../../ruby-asterisk/error'
 
+# IO#timeout was added in Ruby 3.2. async's Fiber Scheduler calls io.timeout
+# inside io_wait to honour per-IO timeouts; returning nil disables that path.
+IO.define_method(:timeout) { nil } unless IO.method_defined?(:timeout)
+IO.define_method(:timeout=) { |_| nil } unless IO.method_defined?(:timeout=)
+
 module RubyAsterisk
   module AGI
     # FastAGI TCP server backed by an Async Fiber scheduler.
