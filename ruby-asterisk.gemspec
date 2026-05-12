@@ -5,7 +5,7 @@ require 'ruby-asterisk/version'
 
 Gem::Specification.new do |s|
   s.name        = 'ruby-asterisk'
-  s.version     = Rami::VERSION
+  s.version     = RubyAsterisk::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ['Emiliano Della Casa']
   s.email       = ['emiliano.dellacasa@gmail.com']
