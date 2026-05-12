@@ -18,12 +18,13 @@ Style/StringLiterals:
   Enabled: true
   EnforcedStyle: single_quotes
 
-# Set reasonable limits but exclude the legacy AMI class
+# Set reasonable limits but exclude large classes that group related commands
 Metrics/ClassLength:
   Enabled: true
   Max: 100
   Exclude:
     - 'lib/ruby-asterisk/ami/client.rb'
+    - 'lib/ruby-asterisk/agi/session.rb'
 
 # Reasonable method length
 Metrics/MethodLength:

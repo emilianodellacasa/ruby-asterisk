@@ -147,13 +147,17 @@ RSpec.describe RubyAsterisk::AGI::Server do
   end
 
   describe 'concurrency' do
-    it 'handles multiple simultaneous connections in parallel' do
-      guard   = Mutex.new
-      started = 0
-      finished = 0
+    it 'handles multiple simultaneous connections using Fiber scheduling' do
+      guard            = Mutex.new
+      started          = 0
+      finished         = 0
+      captured_scheduler = nil
 
       _thread, port = start_test_server(server) do |_session|
-        guard.synchronize { started += 1 }
+        guard.synchronize do
+          started += 1
+          captured_scheduler ||= Fiber.scheduler
+        end
         sleep 0.2
         guard.synchronize { finished += 1 }
       end
@@ -168,15 +172,20 @@ RSpec.describe RubyAsterisk::AGI::Server do
         end
       end.each(&:join)
 
-      # Wait until all 5 handlers have started before timing the parallel phase.
+      # Wait until all 5 handlers have started.
       Timeout.timeout(2) { sleep 0.01 until started == 5 }
 
-      # Joining server threads proves they all ran concurrently.
       server.stop
+
+      # With Fiber scheduling all 5 handlers run concurrently, so finishing
+      # takes ~0.2s regardless of connection count.
+      Timeout.timeout(2) { sleep 0.01 until finished == 5 }
       elapsed = Time.now - start
 
       expect(finished).to eq(5)
       expect(elapsed).to be < 0.8
+      # Proves handlers ran inside an Async Fiber scheduler, not threads.
+      expect(captured_scheduler).not_to be_nil
     end
   end
 

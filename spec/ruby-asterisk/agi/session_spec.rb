@@ -166,5 +166,128 @@ RSpec.describe RubyAsterisk::AGI::Session do
       session.verbose('test message', level: 2)
       expect(written.string).to eq(%(VERBOSE "test message" 2\n))
     end
+
+    it '#exec escapes args containing commas correctly' do
+      session.exec('AGI', 'arg,with,commas', 'say "hi"')
+      expect(written.string).to eq(%(EXEC AGI "arg,with,commas,say \\"hi\\""\n))
+    end
+
+    # -- Telephony commands ---------------------------------------------------
+
+    it '#dial writes EXEC Dial with target and timeout' do
+      session.dial('SIP/1001', timeout: 30)
+      expect(written.string).to eq(%(EXEC Dial "SIP/1001,30"\n))
+    end
+
+    it '#dial includes options when provided' do
+      session.dial('SIP/1001', timeout: 15, options: 'r')
+      expect(written.string).to eq(%(EXEC Dial "SIP/1001,15,r"\n))
+    end
+
+    it '#wait_for_digit writes WAIT FOR DIGIT with timeout' do
+      session.wait_for_digit(3000)
+      expect(written.string).to eq("WAIT FOR DIGIT 3000\n")
+    end
+
+    it '#wait_for_digit uses 5000ms default timeout' do
+      session.wait_for_digit
+      expect(written.string).to eq("WAIT FOR DIGIT 5000\n")
+    end
+
+    it '#record_file writes RECORD FILE with beep by default' do
+      session.record_file('recording', format: 'wav', escape_digits: '#', timeout_ms: 10_000, offset: 0)
+      expect(written.string).to eq(%(RECORD FILE "recording" wav "#" 10000 0 BEEP\n))
+    end
+
+    it '#record_file includes silence param when provided' do
+      session.record_file('msg', silence: 5)
+      expect(written.string).to eq(%(RECORD FILE "msg" wav "#" -1 0 BEEP s=5\n))
+    end
+
+    it '#record_file omits BEEP when beep: false' do
+      session.record_file('msg', beep: false)
+      expect(written.string).to eq(%(RECORD FILE "msg" wav "#" -1 0\n))
+    end
+
+    it '#send_text writes SEND TEXT with quoted message' do
+      session.send_text('hello world')
+      expect(written.string).to eq(%(SEND TEXT "hello world"\n))
+    end
+
+    it '#send_image writes SEND IMAGE with filename' do
+      session.send_image('logo.png')
+      expect(written.string).to eq("SEND IMAGE logo.png\n")
+    end
+
+    it '#channel_status writes CHANNEL STATUS without arg by default' do
+      session.channel_status
+      expect(written.string).to eq("CHANNEL STATUS\n")
+    end
+
+    it '#channel_status writes CHANNEL STATUS with a channel name' do
+      session.channel_status('SIP/1001')
+      expect(written.string).to eq("CHANNEL STATUS SIP/1001\n")
+    end
+
+    # -- AstDB commands -------------------------------------------------------
+
+    it '#database_get writes DATABASE GET command' do
+      session.database_get('family', 'key')
+      expect(written.string).to eq("DATABASE GET family key\n")
+    end
+
+    it '#database_put writes DATABASE PUT command with quoted value' do
+      session.database_put('family', 'key', 'hello world')
+      expect(written.string).to eq(%(DATABASE PUT family key "hello world"\n))
+    end
+
+    it '#database_del writes DATABASE DEL command' do
+      session.database_del('family', 'key')
+      expect(written.string).to eq("DATABASE DEL family key\n")
+    end
+
+    it '#database_deltree writes DATABASE DELTREE without subtree' do
+      session.database_deltree('family')
+      expect(written.string).to eq("DATABASE DELTREE family\n")
+    end
+
+    it '#database_deltree writes DATABASE DELTREE with subtree' do
+      session.database_deltree('family', 'sub/tree')
+      expect(written.string).to eq("DATABASE DELTREE family sub/tree\n")
+    end
+  end
+
+  describe 'multi-line 520 error handling' do
+    let(:logger) { instance_double(Logger, debug: nil, info: nil, warn: nil, error: nil) }
+
+    it 'raises with the accumulated body for a 520- intro followed by 520 closer' do
+      lines = [
+        "520-Invalid command syntax.  Proper usage follows:\n",
+        "520-Usage: WAIT FOR DIGIT <timeout>\n",
+        "520 End of proper usage.\n"
+      ]
+      socket = double('socket')
+      allow(socket).to receive(:write)
+      allow(socket).to receive(:gets).and_return(*lines)
+      session = described_class.new(socket, logger: logger)
+
+      expect { session.execute('BADCMD') }
+        .to raise_error(RubyAsterisk::Error, /Invalid command syntax/)
+    end
+
+    it 'accumulates the usage lines into the error message' do
+      lines = [
+        "520-Invalid command syntax.  Proper usage follows:\n",
+        "520-Usage: WAIT FOR DIGIT <timeout>\n",
+        "520 End of proper usage.\n"
+      ]
+      socket = double('socket')
+      allow(socket).to receive(:write)
+      allow(socket).to receive(:gets).and_return(*lines)
+      session = described_class.new(socket, logger: logger)
+
+      expect { session.execute('BADCMD') }
+        .to raise_error(RubyAsterisk::Error, /WAIT FOR DIGIT/)
+    end
   end
 end
