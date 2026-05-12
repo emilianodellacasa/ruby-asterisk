@@ -2,15 +2,22 @@
 
 require 'socket'
 require 'logger'
+require 'async'
 require_relative 'session'
 require_relative '../../ruby-asterisk/error'
 
+# IO#timeout was added in Ruby 3.2. async's Fiber Scheduler calls io.timeout
+# inside io_wait to honour per-IO timeouts; returning nil disables that path.
+IO.define_method(:timeout) { nil } unless IO.method_defined?(:timeout)
+IO.define_method(:timeout=) { |_| nil } unless IO.method_defined?(:timeout=)
+
 module RubyAsterisk
   module AGI
-    # FastAGI TCP server.
+    # FastAGI TCP server backed by an Async Fiber scheduler.
     #
-    # Listens on a TCP port and dispatches each incoming Asterisk connection to
-    # a user-supplied handler block running in its own thread.
+    # Each incoming Asterisk connection is handled in its own Fiber, so all
+    # concurrent sessions share a single OS thread and their socket IO yields
+    # the Fiber rather than blocking.
     #
     # Usage:
     #   server = RubyAsterisk::AGI::Server.new('0.0.0.0', 4573)
@@ -26,10 +33,8 @@ module RubyAsterisk
         @port    = port.to_i
         @logger  = logger
         @handler = nil
-        @threads = []
         @running = false
         @server  = nil
-        @mutex   = Mutex.new
       end
 
       # Register the per-connection handler block.
@@ -47,34 +52,33 @@ module RubyAsterisk
       def run
         raise Error, 'No handler registered' unless @handler
 
-        @server  = TCPServer.new(@host, @port)
-        @port    = @server.addr[1]
-        @running = true
-        @logger.info("AGI server listening on #{@host}:#{@port}")
-        accept_loop
+        Sync do |parent|
+          @server  = TCPServer.new(@host, @port)
+          @port    = @server.addr[1]
+          @running = true
+          @logger.info("AGI server listening on #{@host}:#{@port}")
+          accept_loop(parent)
+        end
       ensure
         @running = false
         close_server
       end
 
-      # Stop the server and wait for active connection threads to finish.
+      # Signal the server to stop accepting new connections.
+      # Active sessions continue until they finish naturally.
       def stop
         return unless @running
 
         @running = false
         close_server
-        join_threads
       end
 
       private
 
-      def accept_loop
+      def accept_loop(parent)
         loop do
           socket = @server.accept
-          @mutex.synchronize do
-            @threads.delete_if { |t| !t.alive? }
-            @threads << Thread.new(socket) { |s| serve(s) }
-          end
+          parent.async { serve(socket) }
         end
       rescue IOError, Errno::EBADF
         # Server socket closed via stop — normal shutdown
@@ -95,12 +99,6 @@ module RubyAsterisk
         @server = nil
       rescue StandardError
         nil
-      end
-
-      def join_threads
-        threads = @mutex.synchronize { @threads.dup }
-        threads.each { |t| t.join(2) || t.kill }
-        @mutex.synchronize { @threads.clear }
       end
     end
   end

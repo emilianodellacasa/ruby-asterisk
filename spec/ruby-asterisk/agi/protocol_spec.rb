@@ -62,4 +62,81 @@ RSpec.describe RubyAsterisk::AGI::Protocol do
       it { expect(parse[:code]).to eq(0) }
     end
   end
+
+  describe '.format_command' do
+    it 'formats a bare command with no args' do
+      expect(described_class.format_command('ANSWER')).to eq("ANSWER\n")
+    end
+
+    it 'appends plain args without quoting' do
+      expect(described_class.format_command('WAIT FOR DIGIT', '5000')).to eq("WAIT FOR DIGIT 5000\n")
+    end
+
+    it 'wraps args that contain spaces in double quotes' do
+      expect(described_class.format_command('VERBOSE', 'hello world', '1')).to eq(%(VERBOSE "hello world" 1\n))
+    end
+
+    it 'escapes backslashes inside quoted args' do
+      expect(described_class.format_command('EXEC', 'foo', 'a\\b')).to eq(%(EXEC foo "a\\\\b"\n))
+    end
+
+    it 'escapes double quotes inside quoted args' do
+      expect(described_class.format_command('EXEC', 'foo', 'say "hi"')).to eq(%(EXEC foo "say \\"hi\\""\n))
+    end
+  end
+
+  describe '.escape_argument' do
+    it 'returns "" for an empty string' do
+      expect(described_class.escape_argument('')).to eq('""')
+    end
+
+    it 'returns the arg unchanged when no special chars' do
+      expect(described_class.escape_argument('hello-world')).to eq('hello-world')
+    end
+
+    it 'wraps in quotes when arg contains a space' do
+      expect(described_class.escape_argument('hello world')).to eq('"hello world"')
+    end
+
+    it 'escapes an internal backslash' do
+      expect(described_class.escape_argument('a\\b')).to eq('"a\\\\b"')
+    end
+
+    it 'escapes an internal double-quote' do
+      expect(described_class.escape_argument('say "hi"')).to eq('"say \\"hi\\""')
+    end
+  end
+
+  describe '.quote' do
+    it 'always wraps in double quotes even for plain strings' do
+      expect(described_class.quote('hello-world')).to eq('"hello-world"')
+    end
+
+    it 'wraps an empty string' do
+      expect(described_class.quote('')).to eq('""')
+    end
+
+    it 'escapes internal double quotes' do
+      expect(described_class.quote('say "hi"')).to eq('"say \\"hi\\""')
+    end
+
+    it 'escapes internal backslashes' do
+      expect(described_class.quote('a\\b')).to eq('"a\\\\b"')
+    end
+  end
+
+  describe '.error?' do
+    it 'returns true for 5xx codes' do
+      expect(described_class.error?(code: 510, result: nil, data: 'x')).to be(true)
+      expect(described_class.error?(code: 520, result: nil, data: 'x')).to be(true)
+    end
+
+    it 'returns false for 200' do
+      expect(described_class.error?(code: 200, result: '1', data: nil)).to be(false)
+    end
+
+    it 'returns false for code 0' do
+      expect(described_class.error?(code: 0, result: nil, data: 'x')).to be(false)
+    end
+  end
 end

@@ -2,47 +2,94 @@
 
 module RubyAsterisk
   module AGI
-    # Stateless helpers for the FastAGI wire protocol.
+    # Low-level formatter and parser for the FastAGI wire protocol.
     module Protocol
       ENV_LINE = /\A(agi_\w+):\s*(.*)/
-      RESPONSE_LINE = /\A(\d{3})\s+(.*)$/
 
-      # Parse a single AGI response line returned by Asterisk.
+      # Matches a response carrying a result value:  CODE result=VALUE [extra]
+      RESULT_RE = /\A(\d{3})\s+result=(\S+)(?:\s+(.*?))?\s*\z/
+
+      # Matches any response line (fallback):  CODE[-space]message
+      CODE_RE = /\A(\d{3})(?:[-\s](.*?))?\s*\z/
+
+      # Format an AGI command string ready for sending to Asterisk.
       #
-      # Supported formats:
-      #   200 result=<value>
-      #   200 result=<value> endpos=<n>
-      #   200 result=<value> (<extra text>)
-      #   510 Invalid or unknown command
+      # @param command [String]       AGI command verb (e.g. "ANSWER", "EXEC")
+      # @param args    [Array<#to_s>] zero or more arguments
+      # @return [String] space-joined, \n-terminated line
+      def self.format_command(command, *args)
+        parts = [command.to_s]
+        args.each { |a| parts << escape_argument(a.to_s) }
+        "#{parts.join(' ')}\n"
+      end
+
+      # Escape a single AGI command argument.
+      #
+      # Plain alphanumeric/dash/underscore/slash tokens are returned as-is.
+      # Empty strings and strings containing whitespace, quotes, or backslashes
+      # are double-quoted with internal special characters escaped.
+      #
+      # @param arg [String]
+      # @return [String]
+      def self.escape_argument(arg)
+        return '""' if arg.empty?
+        return arg unless arg.match?(/[\s"\\]/)
+
+        escaped = arg.gsub('\\') { '\\\\' }.gsub('"') { '\\"' }
+        "\"#{escaped}\""
+      end
+
+      # Always wrap +arg+ in double quotes, escaping any internal backslashes
+      # and double-quotes. Use for AGI arguments that Asterisk requires to be
+      # quoted regardless of content (filenames, variable values, messages).
+      #
+      # @param arg [String, #to_s]
+      # @return [String]
+      def self.quote(arg)
+        escaped = arg.to_s.gsub('\\') { '\\\\' }.gsub('"') { '\\"' }
+        "\"#{escaped}\""
+      end
+
+      # Parse a single raw AGI response line into a frozen Hash.
       #
       # @param line [String, nil]
-      # @return [Hash] with keys :code (Integer), :result (String|nil), :data (String|nil)
+      # @return [Hash] { code: Integer, result: String|nil, data: String|nil }
       def self.parse_response(line)
-        return { code: 0, result: nil, data: 'Connection closed' } if line.nil?
+        return { code: 0, result: nil, data: 'Connection closed' }.freeze if line.nil?
 
-        m = RESPONSE_LINE.match(line.chomp)
-        return { code: 0, result: nil, data: line.chomp } unless m
+        stripped = line.chomp
+        return { code: 0, result: nil, data: stripped }.freeze if stripped.empty?
 
-        code = m[1].to_i
-        rest = m[2]
-
-        result, data = extract_result_and_data(rest)
-        { code: code, result: result, data: data }
+        parse_result_line(stripped) || parse_code_line(stripped) ||
+          { code: 0, result: nil, data: stripped }.freeze
       end
 
-      # @param rest [String] everything after the status code
-      # @return [Array(String|nil, String|nil)]
-      def self.extract_result_and_data(rest)
-        if (rm = rest.match(/\Aresult=(\S*)\s*(.*)?/))
-          result = rm[1].empty? ? nil : rm[1]
-          extra  = rm[2].strip
-          data   = extra.empty? ? nil : extra.delete_prefix('(').delete_suffix(')')
-          [result, data]
-        else
-          [nil, rest.strip.empty? ? nil : rest.strip]
-        end
+      # @param response [Hash] as returned by {parse_response}
+      # @return [Boolean] true when the response code signals an error
+      def self.error?(response)
+        response[:code] >= 500
       end
-      private_class_method :extract_result_and_data
+
+      # -- private helpers ----------------------------------------------------
+
+      def self.parse_result_line(line)
+        m = RESULT_RE.match(line)
+        return nil unless m
+
+        extra = m[3]&.strip
+        data = extra.nil? || extra.empty? ? nil : extra.delete_prefix('(').delete_suffix(')')
+        { code: m[1].to_i, result: m[2].freeze, data: data&.freeze }.freeze
+      end
+      private_class_method :parse_result_line
+
+      def self.parse_code_line(line)
+        m = CODE_RE.match(line)
+        return nil unless m
+
+        msg = m[2]&.strip || ''
+        { code: m[1].to_i, result: nil, data: (msg.empty? ? nil : msg.freeze) }.freeze
+      end
+      private_class_method :parse_code_line
     end
   end
 end
