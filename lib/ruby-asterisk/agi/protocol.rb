@@ -70,6 +70,71 @@ module RubyAsterisk
         response[:code] >= 500
       end
 
+      # Parse a single line from the initial AGI environment block.
+      #
+      # @param line [String]
+      # @return [Array(String, String), nil] [key, value] pair or nil if not an env line
+      def self.parse_env_line(line)
+        m = ENV_LINE.match(line.chomp)
+        return nil unless m
+
+        [m[1], m[2].strip]
+      end
+
+      # Read and parse the AGI environment block from an I/O source.
+      #
+      # Reads lines via +io.gets+ until a blank line or EOF. Each recognised
+      # +agi_key: value+ line is stored in the returned Hash. Unrecognised lines
+      # are yielded to the optional block (e.g. for debug logging).
+      #
+      # @param io [#gets]
+      # @yieldparam line [String] each unrecognised line (without newline)
+      # @return [Hash{String=>String}]
+      def self.parse_env_block(io)
+        env = {}
+        while (raw = io.gets)
+          chopped = raw.chomp
+          break if chopped.empty?
+
+          pair = parse_env_line(chopped)
+          if pair
+            env[pair[0]] = pair[1]
+          elsif block_given?
+            yield chopped
+          end
+        end
+        env
+      end
+
+      # Complete a (possibly multi-line) 520 error response.
+      #
+      # Returns +first_response+ unchanged when +first_line+ does not begin with
+      # a continuation marker (+NNN-+). Otherwise reads continuation lines from
+      # +io+ until the +NNN <text>+ closing line, then returns a new frozen
+      # response hash with the accumulated body as +:data+.
+      #
+      # @param first_line     [String] the already-read first response line (chomped)
+      # @param first_response [Hash]   as returned by {parse_response}
+      # @param io             [#gets]
+      # @return [Hash]
+      def self.collect_multiline_error(first_line, first_response, io)
+        return first_response unless first_line.match?(/\A\d{3}-/)
+
+        lines = [first_line.sub(/\A\d{3}-/, '')]
+        while (l = io.gets)
+          chopped = l.chomp
+          if chopped.match?(/\A\d{3}\s/)
+            lines << chopped.sub(/\A\d{3}\s*/, '')
+            break
+          else
+            lines << chopped.sub(/\A\d{3}-/, '')
+          end
+        end
+
+        body = lines.reject(&:empty?).join(' ')
+        { code: first_response[:code], result: nil, data: body.freeze }.freeze
+      end
+
       # -- private helpers ----------------------------------------------------
 
       def self.parse_result_line(line)

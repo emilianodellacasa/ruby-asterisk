@@ -23,15 +23,8 @@ module RubyAsterisk
 
       # Read the initial AGI environment block (agi_key: value lines until blank line).
       def read_env
-        while (line = @socket.gets)
-          break if line.chomp.empty?
-
-          m = Protocol::ENV_LINE.match(line.chomp)
-          if m
-            @env[m[1]] = m[2].strip
-          else
-            @logger.debug("AGI env: unexpected line: #{line.chomp}")
-          end
+        @env = Protocol.parse_env_block(@socket) do |line|
+          @logger.debug("AGI env: unexpected line: #{line}")
         end
       end
 
@@ -51,7 +44,7 @@ module RubyAsterisk
         response = Protocol.parse_response(line)
 
         if response[:code] >= 500
-          response = collect_multiline_error(line.chomp, response)
+          response = Protocol.collect_multiline_error(line.chomp, response, @socket)
           raise Error, "AGI error (#{response[:code]}): #{response[:data]}"
         end
 
@@ -152,28 +145,6 @@ module RubyAsterisk
 
       def database_deltree(family, keytree = nil)
         keytree ? execute("DATABASE DELTREE #{family} #{keytree}") : execute("DATABASE DELTREE #{family}")
-      end
-
-      private
-
-      # When the first error line is a multi-line intro (e.g. `520-Invalid…`),
-      # accumulate continuation lines until the `520 End of proper usage.` closer.
-      def collect_multiline_error(first_line, first_response)
-        return first_response unless first_line.match?(/\A\d{3}-/)
-
-        lines = [first_line.sub(/\A\d{3}-/, '')]
-        while (l = @socket.gets)
-          chopped = l.chomp
-          if chopped.match?(/\A\d{3}\s/)
-            lines << chopped.sub(/\A\d{3}\s*/, '')
-            break
-          else
-            lines << chopped.sub(/\A\d{3}-/, '')
-          end
-        end
-
-        body = lines.reject(&:empty?).join(' ')
-        { code: first_response[:code], result: nil, data: body.freeze }.freeze
       end
     end
   end
