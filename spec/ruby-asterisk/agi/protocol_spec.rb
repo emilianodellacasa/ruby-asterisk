@@ -50,6 +50,12 @@ RSpec.describe RubyAsterisk::AGI::Protocol do
       it { expect(parse).to eq(code: 511, result: nil, data: 'Command Not Permitted on a dead channel') }
     end
 
+    context 'with 520 single-line syntax error' do
+      let(:line) { '520 Invalid command syntax' }
+
+      it { expect(parse).to eq(code: 520, result: nil, data: 'Invalid command syntax') }
+    end
+
     context 'with nil (socket EOF)' do
       let(:line) { nil }
 
@@ -122,6 +128,97 @@ RSpec.describe RubyAsterisk::AGI::Protocol do
 
     it 'escapes internal backslashes' do
       expect(described_class.quote('a\\b')).to eq('"a\\\\b"')
+    end
+  end
+
+  describe '.parse_env_line' do
+    it 'returns [key, value] for a valid agi_ line' do
+      expect(described_class.parse_env_line('agi_channel: SIP/test-1')).to eq(['agi_channel', 'SIP/test-1'])
+    end
+
+    it 'strips leading/trailing whitespace from the value' do
+      expect(described_class.parse_env_line('agi_request:  agi://localhost  ')).to eq(['agi_request', 'agi://localhost'])
+    end
+
+    it 'returns nil for a non-agi line' do
+      expect(described_class.parse_env_line('unexpected garbage')).to be_nil
+    end
+
+    it 'returns nil for a blank line' do
+      expect(described_class.parse_env_line('')).to be_nil
+    end
+  end
+
+  describe '.parse_env_block' do
+    require 'stringio'
+
+    it 'parses multiple agi_* lines into a hash' do
+      io = StringIO.new("agi_channel: SIP/1001\nagi_callerid: 555\n\n")
+      env = described_class.parse_env_block(io)
+
+      expect(env).to eq('agi_channel' => 'SIP/1001', 'agi_callerid' => '555')
+    end
+
+    it 'stops at the blank line and ignores content after it' do
+      io = StringIO.new("agi_channel: SIP/1001\n\nagi_after_blank: ignored\n")
+      env = described_class.parse_env_block(io)
+
+      expect(env).not_to have_key('agi_after_blank')
+    end
+
+    it 'yields unrecognised lines to the block' do
+      io = StringIO.new("agi_channel: SIP/1001\nunknown line\n\n")
+      unrecognised = []
+      described_class.parse_env_block(io) { |l| unrecognised << l }
+
+      expect(unrecognised).to eq(['unknown line'])
+      expect(unrecognised.length).to eq(1)
+    end
+
+    it 'handles EOF gracefully (no blank line terminator)' do
+      io = StringIO.new("agi_channel: SIP/1001\n")
+      env = described_class.parse_env_block(io)
+
+      expect(env).to eq('agi_channel' => 'SIP/1001')
+    end
+  end
+
+  describe '.collect_multiline_error' do
+    require 'stringio'
+
+    let(:base_response) { { code: 520, result: nil, data: nil } }
+
+    it 'returns first_response unchanged when first_line has no continuation marker' do
+      io = StringIO.new('')
+      result = described_class.collect_multiline_error('520 Invalid command syntax', base_response, io)
+
+      expect(result).to equal(base_response)
+    end
+
+    it 'reads continuation lines until the closing NNN line and joins them' do
+      continuation = "520-Usage: WAIT FOR DIGIT <timeout>\n520 End of proper usage.\n"
+      io = StringIO.new(continuation)
+      result = described_class.collect_multiline_error('520-Invalid command syntax.', base_response, io)
+
+      expect(result[:code]).to eq(520)
+      expect(result[:data]).to include('Invalid command syntax')
+      expect(result[:data]).to include('WAIT FOR DIGIT')
+    end
+
+    it 'preserves the code from first_response' do
+      continuation = "520-Details\n520 End of proper usage.\n"
+      io = StringIO.new(continuation)
+      result = described_class.collect_multiline_error('520-Intro', { code: 520, result: nil, data: nil }, io)
+
+      expect(result[:code]).to eq(520)
+    end
+
+    it 'returns a frozen hash' do
+      continuation = "520-Usage line\n520 End of proper usage.\n"
+      io = StringIO.new(continuation)
+      result = described_class.collect_multiline_error('520-Intro', base_response, io)
+
+      expect(result).to be_frozen
     end
   end
 
