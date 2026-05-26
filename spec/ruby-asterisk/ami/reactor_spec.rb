@@ -38,11 +38,11 @@ RSpec.describe RubyAsterisk::AMI::Reactor do
     it 'both threads are dead after stop' do
       reactor = build_reactor
       reactor.start
-      reactor_thread = reactor.instance_variable_get(:@reactor_thread)
-      writer_thread  = reactor.instance_variable_get(:@writer_thread)
+      writer_thread = reactor.instance_variable_get(:@writer_thread)
+      reader_thread = reactor.instance_variable_get(:@reader_thread)
       reactor.stop
-      expect(reactor_thread).not_to be_alive
       expect(writer_thread).not_to be_alive
+      expect(reader_thread).not_to be_alive
     end
 
     it 'can be stopped twice without error' do
