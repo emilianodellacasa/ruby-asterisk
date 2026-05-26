@@ -8,17 +8,7 @@ require 'support/mock_ami_server'
 NEWLINES = ["\r\n", "\n"].freeze
 
 RSpec.describe RubyAsterisk::AMI::Client do
-  let(:mock_server_thread) { nil }
-  let(:mock_port) { 0 }
-
-  def flush_mailbox
-    Timeout.timeout(0.1) { loop { Ractor.receive } }
-  rescue StandardError
-    nil
-  end
-
   before do
-    flush_mailbox
     # Start server that responds to Login and Ping
     @server_thread, @port = MockAMIServer.start do |client|
       buffer = +''
@@ -42,7 +32,6 @@ RSpec.describe RubyAsterisk::AMI::Client do
 
   after do
     @server_thread&.kill
-    flush_mailbox
   end
 
   let(:client) { described_class.new(host: 'localhost', port: @port) }

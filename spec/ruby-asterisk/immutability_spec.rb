@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-describe 'Immutability for Ractor safety' do
+describe 'Immutability of value objects' do
   describe RubyAsterisk::Request do
     subject { RubyAsterisk::Request.new('Originate', { 'Channel' => '1234', 'Context' => 'test' }) }
 
@@ -46,10 +46,6 @@ describe 'Immutability for Ractor safety' do
     it 'does not expose response_data' do
       subject.respond_to?(:response_data).should be false
       subject.respond_to?(:response_data=).should be false
-    end
-
-    it 'is Ractor-shareable' do
-      Ractor.shareable?(subject).should be true
     end
   end
 
@@ -96,10 +92,6 @@ describe 'Immutability for Ractor safety' do
       subject.respond_to?(:message=).should be false
       subject.respond_to?(:data=).should be false
       subject.respond_to?(:raw_response=).should be false
-    end
-
-    it 'is Ractor-shareable' do
-      Ractor.shareable?(subject).should be true
     end
 
     context 'with parsed data containing nested structures' do
