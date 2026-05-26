@@ -24,7 +24,6 @@ Metrics/ClassLength:
   Max: 100
   Exclude:
     - 'lib/ruby-asterisk/ami/client.rb'
-    - 'lib/ruby-asterisk/ami/reactor.rb'
     - 'lib/ruby-asterisk/agi/session.rb'
 
 # Reasonable method length

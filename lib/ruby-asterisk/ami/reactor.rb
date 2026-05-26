@@ -7,38 +7,40 @@ require 'ruby-asterisk/compat'
 
 module RubyAsterisk
   module AMI
-    # Single Async reactor running in a dedicated OS thread.
+    # Hosts the AMI connection in two dedicated OS threads:
     #
-    # Hosts two cooperative Fibers:
-    #   - intake_fiber  : reads commands from external threads (IO.pipe doorbell
-    #                     + Thread::Queue) and writes them to the AMI socket.
-    #   - reader_fiber  : reads from the AMI socket, parses frames with Parser,
-    #                     resolves pending Promises or fires the on_event callback.
+    #   reactor_thread  — runs an Async reactor with a single reader Fiber that
+    #                     reads from the socket, parses AMI frames, and resolves
+    #                     Promises / fires the on_event callback.
+    #
+    #   writer_thread   — blocks on Thread::Queue#pop and writes commands to the
+    #                     socket.  Thread::Queue wakeup works on all Ruby versions
+    #                     without relying on the Fiber scheduler; closing the socket
+    #                     on :stop unblocks the reader Fiber in the other thread.
     #
     # Thread-safety contract:
-    #   - External threads communicate via #send_command, #register_promise,
+    #   - External callers use #send_command, #register_promise,
     #     #reject_all_promises, #stop — all thread-safe.
-    #   - Promise resolution is Mutex+CV (Promise class unchanged).
-    #   - No Mutex is needed *inside* the reactor (all Fiber, single OS thread).
+    #   - Promise resolution via Mutex+CV (Promise class unchanged).
     class Reactor
       def initialize(host, port, on_event: nil)
         @host     = host
         @port     = port
         @on_event = on_event
 
-        @command_queue = Thread::Queue.new
-        @doorbell_r, @doorbell_w = IO.pipe
+        @command_queue  = Thread::Queue.new
         @ready_queue    = Thread::Queue.new
         @promises_mutex = Mutex.new
         @promises       = {}
         @socket         = nil
-        @thread         = nil
+        @reactor_thread = nil
+        @writer_thread  = nil
       end
 
-      # Start the reactor thread and block until the socket is connected.
+      # Start both threads and block until the socket is connected.
       # Raises if the connection fails.
       def start
-        @thread = Thread.new { run }
+        @reactor_thread = Thread.new { run }
         result = @ready_queue.pop
         raise result if result.is_a?(Exception)
 
@@ -48,7 +50,6 @@ module RubyAsterisk
       # Send a raw AMI command string from any external thread.
       def send_command(cmd)
         @command_queue.push(cmd.freeze)
-        @doorbell_w.write_nonblock('.')
       end
 
       # Register a Promise keyed by ActionID.
@@ -64,71 +65,48 @@ module RubyAsterisk
         promises.each { |p| p.reject(error) }
       end
 
-      # Stop the reactor gracefully. Blocks until the reactor thread exits.
+      # Stop both threads gracefully. Blocks until they exit.
       def stop
-        return unless @thread&.alive?
+        return unless @reactor_thread&.alive?
 
-        @command_queue.push(:stop)
-        @doorbell_w.write_nonblock('.')
-        @thread.join(2)
-        @thread = nil
+        @command_queue.push(:stop) # wakes writer_thread immediately
+        @writer_thread&.join(2)
+        @reactor_thread.join(2)
+        @reactor_thread = nil
+        @writer_thread  = nil
       end
 
       private
 
       def run
+        @socket = TCPSocket.new(@host, @port)
+        @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+        @socket.gets # consume AMI banner ("Asterisk Call Manager/x.y\n")
+
+        @writer_thread = Thread.new { writer_loop(@socket) }
+        @ready_queue << nil # nil = success
+
         Sync do |root|
-          connect_socket
-          @ready_queue << nil # nil = success
-          root.async { intake_fiber(@socket) }
           root.async { reader_fiber(@socket) }
         end
       rescue StandardError => e
         @ready_queue << e # surface connection error to #start
         reject_all_promises(RuntimeError.new("Reactor failed: #{e.message}"))
       ensure
-        teardown_io
-      end
-
-      def connect_socket
-        socket = TCPSocket.new(@host, @port)
-        socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
-        @socket = socket
-        socket.gets # consume AMI banner ("Asterisk Call Manager/x.y\n")
-      end
-
-      def teardown_io
         close_socket
-        begin
-          @doorbell_r.close
-        rescue StandardError
-          nil
-        end
-        begin
-          @doorbell_w.close
-        rescue StandardError
-          nil
-        end
       end
 
-      def intake_fiber(socket)
+      def writer_loop(socket)
         loop do
-          @doorbell_r.read(1)
+          cmd = @command_queue.pop
+          break if cmd == :stop
 
-          msg = begin
-            @command_queue.pop(true)
-          rescue ThreadError
-            next
-          end
-
-          break if msg == :stop
-
-          socket.write(msg)
+          socket.write(cmd)
         rescue IOError, Errno::EBADF
           break
         end
       ensure
-        close_socket # unblocks reader_fiber's readpartial
+        close_socket # unblocks reader_fiber's readpartial in the reactor thread
       end
 
       def reader_fiber(socket)
@@ -141,7 +119,7 @@ module RubyAsterisk
       rescue EOFError
         reject_all_promises(RuntimeError.new('Disconnected: EOF from server'))
       rescue IOError, Errno::EBADF
-        # Normal shutdown triggered by intake_fiber closing the socket
+        # Normal shutdown triggered by writer_loop closing the socket
       rescue StandardError => e
         reject_all_promises(RuntimeError.new("Reactor read error: #{e.message}"))
       end
