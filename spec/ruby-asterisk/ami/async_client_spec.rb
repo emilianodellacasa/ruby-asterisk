@@ -31,15 +31,6 @@ def ami_responder
 end
 
 RSpec.describe 'RubyAsterisk::AMI::Client — async behaviour' do
-  def flush_mailbox
-    Timeout.timeout(0.1) { loop { Ractor.receive } }
-  rescue StandardError
-    nil
-  end
-
-  before { flush_mailbox }
-  after  { flush_mailbox }
-
   # -------------------------------------------------------------------------
   # Shared setup: a standard mock Asterisk server
   # -------------------------------------------------------------------------

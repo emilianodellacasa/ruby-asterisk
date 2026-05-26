@@ -4,7 +4,7 @@ module RubyAsterisk
   module AMI
     ##
     # Immutable value object representing a parsed AMI event.
-    # All attributes are frozen and the object is Ractor-shareable.
+    # All attributes are frozen for thread-safe sharing.
     #
     class Event
       attr_reader :name, :headers, :raw
