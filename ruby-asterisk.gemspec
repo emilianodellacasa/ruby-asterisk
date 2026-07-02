@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
 
   s.add_runtime_dependency 'async', '~> 2.0'
   s.add_runtime_dependency 'faraday', '>= 1.0'
-  s.add_runtime_dependency 'faye-websocket', '~> 0.11'
+  s.add_runtime_dependency 'websocket-driver', '~> 0.8'
 
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rspec'

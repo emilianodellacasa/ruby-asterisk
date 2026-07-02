@@ -11,7 +11,7 @@ Use this skill when you need to react to Asterisk events in real time — for ex
 
 ## Core concepts
 
-- The WebSocket client runs an **EventMachine reactor in a background thread**. `connect` returns immediately; event processing happens in that thread.
+- The WebSocket client runs a **connection thread that owns the socket read loop** (protocol handled by the pure Ruby `websocket-driver` gem — no EventMachine). `connect` returns immediately; event processing happens in that thread.
 - Register handlers with `on(event_type, &block)` before or after connecting — handlers are stored and called whenever a matching event arrives.
 - **Multiple handlers** for the same event type are supported; all are called in registration order.
 - Auto-reconnect is enabled by default. When the connection drops, the client waits `reconnect_delay` seconds and reconnects. Set `auto_reconnect: false` to disable.
@@ -129,8 +129,9 @@ sleep
 
 ## Gotchas
 
-- **`connect` is non-blocking** — it starts a background EventMachine thread and returns `self`. The main thread must stay alive (e.g. `sleep`) for the event loop to run.
-- **Callbacks execute in the EventMachine thread** — avoid long-running or blocking operations in callbacks; offload to a separate thread if needed.
+- **`connect` is non-blocking** — it starts a background connection thread and returns `self`. The main thread must stay alive (e.g. `sleep`) for events to be processed.
+- **Callbacks execute in the connection thread** — avoid long-running or blocking operations in callbacks; offload to a separate thread if needed. A blocked callback also blocks the read loop.
+- **`send_message?` is thread-safe** — outgoing writes are serialized through an internal reentrant Monitor, so it can be called from any thread (including from inside a callback).
 - **`send_message?` returns `false`** when not connected — always check the return value if delivery matters.
 - **Auto-reconnect** is enabled by default. Call `disconnect` when you actually want to stop; just closing the socket will trigger a reconnect.
 - **`app_name` must match** the Stasis application in Asterisk; events from other applications are not forwarded.
@@ -139,6 +140,9 @@ sleep
 ## Source files
 
 - `lib/ruby-asterisk/ari/websocket.rb` — `WebSocket` class
-- `lib/ruby-asterisk/ari/websocket/connection.rb` — `Connection` module (establish, ping, reconnect)
+- `lib/ruby-asterisk/ari/websocket/connection.rb` — `Connection` module (connect, read loop, reconnect)
+- `lib/ruby-asterisk/ari/websocket/heartbeat.rb` — `Heartbeat` module (ping timer, interruptible waits)
 - `lib/ruby-asterisk/ari/websocket/event_handlers.rb` — `EventHandlers` module (dispatch callbacks)
-- `spec/ruby-asterisk/ari/websocket_spec.rb`
+- `lib/ruby-asterisk/ari/websocket/socket_adapter.rb` — socket wrapper handed to `websocket-driver`
+- `spec/ruby-asterisk/ari/websocket_spec.rb` — unit specs
+- `spec/ruby-asterisk/ari/websocket_integration_spec.rb` — integration specs against `spec/support/mock_ari_websocket_server.rb`

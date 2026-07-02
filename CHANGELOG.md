@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **AMI async reactor** — replaced the experimental Ractor pipeline (`SocketReaderRactor` + `ParserRactor` + event-loop Thread) with a single `Async` reactor running in a dedicated OS thread. Two cooperative Fibers (intake + reader) handle socket I/O; a pure `Parser` module handles frame parsing. Public `Client` API is unchanged; `Promise` (Mutex+CV) is unchanged. Unifies the concurrency runtime with AGI (both now use the `async` gem). Removes experimental Ractor warnings, CI GC workarounds, and the `sleep 0.2` suite teardown.
+- **ARI WebSocket without EventMachine** — replaced `faye-websocket` + `eventmachine` with the pure Ruby `websocket-driver` gem over a plain `TCPSocket` (`SSLSocket` for https): a connection thread owns connect/read-loop/auto-reconnect, a ping thread sends keep-alives, and driver access is serialized through a reentrant Monitor so `send_message?` is thread-safe. Public `WebSocket` API and wire protocol are unchanged. Fixes `bundle install` on ruby-head (4.1.0-dev), where `eventmachine` 1.2.7 no longer compiles (`Data_Wrap_Struct` removed from the C API) (#82).
+- **AMI reactor** — replaced the experimental Ractor pipeline (`SocketReaderRactor` + `ParserRactor` + event-loop Thread) with two plain OS threads (reader + writer) around a pure `Parser` module; plain Threads give deterministic shutdown on all Ruby ≥ 3.1. Public `Client` API is unchanged; `Promise` (Mutex+CV) is unchanged. Removes experimental Ractor warnings, CI GC workarounds, and the `sleep 0.2` suite teardown (#79).
 
 ## [1.0.0] - 2026-05-12
 

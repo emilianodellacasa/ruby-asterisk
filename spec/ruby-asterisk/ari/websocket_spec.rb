@@ -84,7 +84,7 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
       end
     end
 
-    context 'when connected flag is true but no WebSocket' do
+    context 'when connected flag is true but no driver' do
       before do
         websocket.instance_variable_set(:@connected, true)
       end
@@ -94,12 +94,12 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
       end
     end
 
-    context 'when connected with WebSocket' do
-      let(:ws) { instance_double(Faye::WebSocket::Client, ready_state: Faye::WebSocket::API::OPEN) }
+    context 'when connected with an open driver' do
+      let(:driver) { instance_double(WebSocket::Driver::Client, state: :open) }
 
       before do
         websocket.instance_variable_set(:@connected, true)
-        websocket.instance_variable_set(:@ws, ws)
+        websocket.instance_variable_set(:@driver, driver)
       end
 
       it 'returns true' do
@@ -116,37 +116,42 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
     end
 
     context 'when connected' do
-      let(:ws) { instance_double(Faye::WebSocket::Client, ready_state: Faye::WebSocket::API::OPEN, send: nil) }
+      let(:driver) { instance_double(WebSocket::Driver::Client, state: :open, text: true) }
 
       before do
         websocket.instance_variable_set(:@connected, true)
-        websocket.instance_variable_set(:@ws, ws)
+        websocket.instance_variable_set(:@driver, driver)
       end
 
       it 'sends string message' do
         websocket.send_message?('test message')
-        expect(ws).to have_received(:send).with('test message')
+        expect(driver).to have_received(:text).with('test message')
       end
 
       it 'converts hash to JSON' do
         websocket.send_message?({ type: 'test', data: 'value' })
-        expect(ws).to have_received(:send).with('{"type":"test","data":"value"}')
+        expect(driver).to have_received(:text).with('{"type":"test","data":"value"}')
       end
 
       it 'returns true' do
         expect(websocket.send_message?('test')).to be(true)
       end
+
+      it 'returns false when the write raises IOError' do
+        allow(driver).to receive(:text).and_raise(IOError)
+        expect(websocket.send_message?('test')).to be(false)
+      end
     end
   end
 
   describe '#disconnect' do
-    let(:ws) { instance_double(Faye::WebSocket::Client, close: nil) }
-    let(:ping_timer) { instance_double(EM::PeriodicTimer, cancel: nil) }
+    let(:driver) { instance_double(WebSocket::Driver::Client, state: :open, close: nil) }
+    let(:socket) { instance_double(TCPSocket, close: nil) }
 
     before do
-      websocket.instance_variable_set(:@ws, ws)
+      websocket.instance_variable_set(:@driver, driver)
+      websocket.instance_variable_set(:@socket, socket)
       websocket.instance_variable_set(:@connected, true)
-      websocket.instance_variable_set(:@ping_timer, ping_timer)
     end
 
     it 'sets should_reconnect to false' do
@@ -154,14 +159,20 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
       expect(websocket.instance_variable_get(:@should_reconnect)).to be(false)
     end
 
-    it 'stops ping timer' do
+    it 'stops the ping timer' do
       websocket.disconnect
-      expect(ping_timer).to have_received(:cancel)
+      expect(websocket.instance_variable_get(:@ping_token)).to be_nil
+      expect(websocket.instance_variable_get(:@ping_thread)).to be_nil
     end
 
-    it 'closes the WebSocket' do
+    it 'sends a close frame' do
       websocket.disconnect
-      expect(ws).to have_received(:close)
+      expect(driver).to have_received(:close)
+    end
+
+    it 'closes the socket' do
+      websocket.disconnect
+      expect(socket).to have_received(:close)
     end
 
     it 'sets connected to false' do
@@ -260,7 +271,7 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
 
   describe 'private #handle_message' do
     let(:event_json) { '{"type":"StasisStart","channel":{"id":"123"}}' }
-    let(:event) { double('Faye::WebSocket::API::Event', data: event_json) }
+    let(:event) { double('WebSocket::Driver::MessageEvent', data: event_json) }
 
     it 'parses JSON and dispatches event' do
       called = false
@@ -277,7 +288,7 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
     end
 
     it 'logs error for invalid JSON' do
-      invalid_event = double('Faye::WebSocket::API::Event', data: 'invalid json')
+      invalid_event = double('WebSocket::Driver::MessageEvent', data: 'invalid json')
 
       websocket.send(:handle_message, invalid_event)
 
@@ -286,11 +297,11 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
   end
 
   describe 'private #handle_open' do
-    let(:ws) { instance_double(Faye::WebSocket::Client) }
+    let(:driver) { instance_double(WebSocket::Driver::Client) }
     let(:connect_callback) { proc { |ws| } }
 
     before do
-      websocket.instance_variable_set(:@ws, ws)
+      websocket.instance_variable_set(:@driver, driver)
       websocket.instance_variable_set(:@on_connect_callback, connect_callback)
       allow(websocket).to receive(:start_ping_timer)
     end
@@ -323,12 +334,12 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
   end
 
   describe 'private #handle_close' do
-    let(:event) { double('Faye::WebSocket::API::Event', code: 1000, reason: 'Normal closure') }
+    let(:event) { double('WebSocket::Driver::CloseEvent', code: 1000, reason: 'Normal closure') }
 
     before do
       websocket.instance_variable_set(:@connected, true)
       allow(websocket).to receive(:stop_ping_timer)
-      allow(websocket).to receive(:schedule_reconnect)
+      allow(websocket).to receive(:close_socket)
     end
 
     it 'sets connected to false' do
@@ -346,20 +357,14 @@ RSpec.describe RubyAsterisk::ARI::WebSocket do
       expect(logger).to have_received(:warn).with(/WebSocket closed/)
     end
 
-    it 'schedules reconnect if should_reconnect is true' do
+    it 'closes the socket so the read loop unblocks' do
       websocket.send(:handle_close, event)
-      expect(websocket).to have_received(:schedule_reconnect)
-    end
-
-    it 'does not schedule reconnect if should_reconnect is false' do
-      websocket.instance_variable_set(:@should_reconnect, false)
-      websocket.send(:handle_close, event)
-      expect(websocket).not_to have_received(:schedule_reconnect)
+      expect(websocket).to have_received(:close_socket)
     end
   end
 
   describe 'private #handle_error' do
-    let(:event) { double('Faye::WebSocket::API::Event', message: 'Connection failed') }
+    let(:event) { double('WebSocket::Driver::ProtocolError', message: 'Connection failed') }
 
     it 'logs error message' do
       websocket.send(:handle_error, event)
