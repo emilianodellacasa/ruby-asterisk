@@ -1,19 +1,38 @@
 # frozen_string_literal: true
 
-require 'faye/websocket'
-require 'eventmachine'
+require 'websocket/driver'
+require 'socket'
+require 'openssl'
 require 'json'
 require 'uri'
 require 'logger'
+require 'monitor'
+require_relative 'websocket/socket_adapter'
 require_relative 'websocket/connection'
+require_relative 'websocket/heartbeat'
 require_relative 'websocket/event_handlers'
 
 module RubyAsterisk
   module ARI
     # WebSocket client for ARI events
     # Connects to the Asterisk ARI WebSocket endpoint to receive real-time events
+    #
+    # I/O model (no EventMachine): the WebSocket protocol is handled by the pure
+    # Ruby websocket-driver gem over a plain TCPSocket (SSLSocket for wss).
+    #
+    #   connection_thread — owns the socket lifecycle: connects, runs the read
+    #                       loop (readpartial -> driver.parse -> callbacks), and
+    #                       re-connects after a drop while auto-reconnect is on.
+    #
+    #   ping_thread       — started when the connection opens; wakes every
+    #                       ping_interval seconds and sends a WebSocket ping.
+    #
+    # Event callbacks execute in the connection thread. All driver calls are
+    # serialized through a reentrant Monitor so send_message? is safe from any
+    # thread.
     class WebSocket
       include Connection
+      include Heartbeat
       include EventHandlers
 
       attr_reader :url, :app_name, :callbacks, :connected
@@ -42,16 +61,13 @@ module RubyAsterisk
         @api_key = api_key
         @app_name = app_name
         @callbacks = {}
-        @ws = nil
         @connected = false
-        @ping_timer = nil
-        @reconnect_timer = nil
         @should_reconnect = options.fetch(:auto_reconnect, true)
         @reconnect_attempts = 0
         @logger = options[:logger] || Logger.new($stdout)
         @ping_interval = options.fetch(:ping_interval, PING_INTERVAL)
         @reconnect_delay = options.fetch(:reconnect_delay, RECONNECT_DELAY)
-        @em_thread = nil
+        initialize_io_state
       end
 
       # Connect to the WebSocket endpoint
@@ -60,15 +76,7 @@ module RubyAsterisk
       # @return [self]
       def connect(&block)
         @on_connect_callback = block
-
-        # Start EventMachine if not already running
-        unless EM.reactor_running?
-          @em_thread = Thread.new { EM.run }
-          sleep 0.1 until EM.reactor_running?
-        end
-
-        EM.next_tick { establish_connection }
-
+        @connection_thread = Thread.new { connection_loop }
         self
       end
 
@@ -89,12 +97,12 @@ module RubyAsterisk
       def disconnect
         @should_reconnect = false
         stop_ping_timer
-        stop_reconnect_timer
+        close_connection
+        wake_sleepers
 
-        if @ws
-          @ws.close
-          @ws = nil
-        end
+        thread = @connection_thread
+        @connection_thread = nil
+        thread&.join(2) unless thread == Thread.current
 
         @connected = false
         @logger.info 'WebSocket disconnected'
@@ -105,7 +113,7 @@ module RubyAsterisk
       #
       # @return [Boolean]
       def connected?
-        !!(@connected && @ws && @ws.ready_state == Faye::WebSocket::API::OPEN)
+        !!(@connected && @driver && @driver.state == :open)
       end
 
       # Send a message through the WebSocket
@@ -113,11 +121,27 @@ module RubyAsterisk
       # @param message [Hash, String] Message to send (will be converted to JSON if Hash)
       # @return [Boolean] true if sent successfully
       def send_message?(message)
-        return false unless connected?
+        driver = @driver
+        return false unless @connected && driver && driver.state == :open
 
         data = message.is_a?(Hash) ? JSON.generate(message) : message
-        @ws.send(data)
+        @driver_monitor.synchronize { driver.text(data) }
         true
+      rescue IOError, SystemCallError
+        false
+      end
+
+      private
+
+      def initialize_io_state
+        @driver = nil
+        @socket = nil
+        @connection_thread = nil
+        @ping_thread = nil
+        @ping_token = nil
+        @driver_monitor = Monitor.new
+        @wake_mutex = Mutex.new
+        @wake_cv = ConditionVariable.new
       end
     end
   end

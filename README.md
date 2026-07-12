@@ -6,15 +6,15 @@ A Ruby client for [Asterisk PBX](https://www.asterisk.org/) covering three inter
 
 | Interface | Use case | Entry point | Concurrency model |
 |---|---|---|---|
-| **AMI** | TCP command/event channel | `RubyAsterisk::AMI::Client` | Ractor + Promise (non-blocking) |
+| **AMI** | TCP command/event channel | `RubyAsterisk::AMI::Client` | Threads + Promise (non-blocking) |
 | **ARI HTTP** | REST control API | `RubyAsterisk::ARI::Client` | Synchronous (Faraday) |
-| **ARI WebSocket** | Real-time event stream | `RubyAsterisk::ARI::WebSocket` | EventMachine + Faye |
+| **ARI WebSocket** | Real-time event stream | `RubyAsterisk::ARI::WebSocket` | websocket-driver + Threads |
 | **AGI / FastAGI** | In-process dialplan logic | `RubyAsterisk::AGI::Server` | Async + Fibers |
 
 ## Requirements
 
 - **Ruby ≥ 3.1**
-- Runtime dependencies: `async ~> 2.0`, `faraday >= 1.0`, `faye-websocket ~> 0.11`
+- Runtime dependencies: `async ~> 2.0`, `faraday >= 1.0`, `websocket-driver ~> 0.8`
 
 > **Ruby 3.1 note**: the `IO#timeout` shim required by the Async Fiber scheduler is applied automatically when the AGI module is loaded — no action needed.
 
@@ -330,7 +330,7 @@ ws.send_message?({ type: 'ping' })
 ws.disconnect
 ```
 
-> **Threading note**: `connect` starts an EventMachine reactor in a background thread. Event callbacks execute in that thread — avoid direct UI updates or non-thread-safe operations inside callbacks.
+> **Threading note**: `connect` starts a background connection thread that owns the socket read loop. Event callbacks execute in that thread — avoid direct UI updates or non-thread-safe operations inside callbacks.
 
 ---
 

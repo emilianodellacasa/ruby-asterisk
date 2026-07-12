@@ -19,7 +19,7 @@ module RubyAsterisk
 
         # Handle incoming WebSocket message
         #
-        # @param event [Faye::WebSocket::API::Event]
+        # @param event [WebSocket::Driver::MessageEvent]
         def handle_message(event)
           data = JSON.parse(event.data)
           event_type = data['type']
@@ -32,21 +32,22 @@ module RubyAsterisk
           @logger.error "Failed to parse message: #{e.message}"
         end
 
-        # Handle WebSocket close event
+        # Handle WebSocket close event. Reconnection is handled by the
+        # connection thread once the read loop unblocks.
         #
-        # @param event [Faye::WebSocket::API::Event]
+        # @param event [WebSocket::Driver::CloseEvent]
         def handle_close(event)
           @connected = false
           stop_ping_timer
 
           @logger.warn "WebSocket closed: code=#{event.code}, reason=#{event.reason}"
 
-          schedule_reconnect if @should_reconnect
+          close_socket
         end
 
         # Handle WebSocket error event
         #
-        # @param event [Faye::WebSocket::API::Event]
+        # @param event [WebSocket::Driver::ProtocolError]
         def handle_error(event)
           @logger.error "WebSocket error: #{event.message}"
         end

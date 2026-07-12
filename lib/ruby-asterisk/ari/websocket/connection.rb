@@ -18,78 +18,119 @@ module RubyAsterisk
           "#{ws_scheme}://#{auth}#{uri.host}:#{uri.port}/ari/events?app=#{@app_name}"
         end
 
+        # Main loop of the connection thread: connect, read until the
+        # connection drops, then reconnect while auto-reconnect is enabled.
+        def connection_loop
+          loop do
+            run_connection
+            break unless @should_reconnect
+            break unless wait_before_reconnect
+          end
+        end
+
+        # Run a single connection: establish it and read until it drops.
+        def run_connection
+          establish_connection
+        rescue StandardError => e
+          @logger.error "Failed to establish connection: #{e.message}"
+        else
+          read_loop
+        ensure
+          cleanup_connection
+        end
+
         # Establish WebSocket connection
         def establish_connection
           @logger.info "Connecting to ARI WebSocket: app=#{@app_name}"
 
-          url = build_url
-          @ws = Faye::WebSocket::Client.new(url)
+          @socket = open_socket(URI.parse(@base_url))
+          @driver = ::WebSocket::Driver.client(SocketAdapter.new(build_url, @socket))
 
           setup_event_handlers
-        rescue StandardError => e
-          @logger.error "Failed to establish connection: #{e.message}"
-          schedule_reconnect
+          @driver.start
+        end
+
+        # Open a TCP socket, wrapped in TLS when the base URL is https
+        def open_socket(uri)
+          tcp = TCPSocket.new(uri.host, uri.port)
+          tcp.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+          return tcp unless uri.scheme == 'https'
+
+          context = OpenSSL::SSL::SSLContext.new
+          context.set_params
+          ssl = OpenSSL::SSL::SSLSocket.new(tcp, context)
+          ssl.hostname = uri.host
+          ssl.sync_close = true
+          ssl.connect
+          ssl
         end
 
         # Setup WebSocket event handlers
         def setup_event_handlers
-          @ws.on :open do |_event|
-            handle_open
-          end
-
-          @ws.on :message do |event|
-            handle_message(event)
-          end
-
-          @ws.on :close do |event|
-            handle_close(event)
-          end
-
-          @ws.on :error do |event|
-            handle_error(event)
-          end
+          @driver.on(:open) { |_event| handle_open }
+          @driver.on(:message) { |event| handle_message(event) }
+          @driver.on(:close) { |event| handle_close(event) }
+          @driver.on(:error) { |event| handle_error(event) }
         end
 
-        # Start the ping timer to keep connection alive
-        def start_ping_timer
+        # Feed incoming bytes to the driver until the socket closes
+        def read_loop
+          loop do
+            chunk = @socket.readpartial(4096)
+            @driver_monitor.synchronize { @driver.parse(chunk) }
+          end
+        rescue IOError, SystemCallError
+          handle_connection_lost
+        end
+
+        # The socket dropped without a WebSocket close frame
+        def handle_connection_lost
+          return unless @connected
+
+          @connected = false
           stop_ping_timer
-
-          @ping_timer = EM::PeriodicTimer.new(@ping_interval) do
-            if connected?
-              @logger.debug 'Sending ping'
-              @ws.ping
-            end
-          end
+          @logger.warn 'WebSocket connection lost'
         end
 
-        # Stop the ping timer
-        def stop_ping_timer
-          @ping_timer&.cancel
-          @ping_timer = nil
+        # Release per-connection resources after the read loop exits
+        def cleanup_connection
+          stop_ping_timer
+          close_socket
+          @driver = nil
+          @socket = nil
+          @connected = false
         end
 
-        # Schedule a reconnection attempt
-        def schedule_reconnect
-          return unless @should_reconnect
-
+        # Wait before the next reconnection attempt
+        #
+        # @return [Boolean] false when reconnection must stop
+        def wait_before_reconnect
           if MAX_RECONNECT_ATTEMPTS && @reconnect_attempts >= MAX_RECONNECT_ATTEMPTS
             @logger.error 'Max reconnection attempts reached, giving up'
-            return
+            return false
           end
 
           @reconnect_attempts += 1
           @logger.info "Scheduling reconnection attempt #{@reconnect_attempts} in #{@reconnect_delay} seconds"
 
-          stop_reconnect_timer
-          @reconnect_timer = EM::Timer.new(@reconnect_delay) do
-            establish_connection
-          end
+          wait_or_wake(@reconnect_delay)
+          @should_reconnect
         end
 
-        # Stop the reconnect timer
-        def stop_reconnect_timer
-          @reconnect_timer&.cancel
-          @reconnect_timer = nil
+        # Send a close frame (if the connection is open) and close the socket
+        def close_connection
+          driver = @driver
+          @driver_monitor.synchronize { driver.close } if driver && driver.state == :open
+        rescue StandardError
+          nil
+        ensure
+          close_socket
+        end
+
+        def close_socket
+          @socket&.close
+        rescue StandardError
+          nil
         end
       end
     end
