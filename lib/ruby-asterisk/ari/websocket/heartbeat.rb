@@ -15,13 +15,23 @@ module RubyAsterisk
           @ping_thread = Thread.new { ping_loop(token) }
         end
 
-        # Send a ping every @ping_interval seconds until the token is revoked
+        # Send a ping every @ping_interval seconds until the token is revoked.
+        # If the previous ping was never answered by a pong, treat the connection
+        # as dead (half-open) and close the socket so the read loop unblocks and
+        # auto-reconnect can take over.
         def ping_loop(token)
           loop do
             wait_or_wake(@ping_interval)
             break unless token.equal?(@ping_token)
             next unless connected?
 
+            if @awaiting_pong
+              @logger.warn 'No pong received within ping interval; closing dead connection'
+              close_socket
+              break
+            end
+
+            @awaiting_pong = true
             @logger.debug 'Sending ping'
             send_ping
           end
@@ -29,7 +39,7 @@ module RubyAsterisk
 
         def send_ping
           driver = @driver
-          @driver_monitor.synchronize { driver&.ping }
+          @driver_monitor.synchronize { driver&.ping('') { @awaiting_pong = false } }
         rescue IOError, SystemCallError
           nil
         end

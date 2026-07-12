@@ -19,7 +19,7 @@ module RubyAsterisk
 
         def list(params = {})
           data = @client.get(@base_path, params)
-          data.map { |item| @resource_class.new(item, @client) }
+          (data || []).map { |item| @resource_class.new(item, @client) }
         end
       end
     end

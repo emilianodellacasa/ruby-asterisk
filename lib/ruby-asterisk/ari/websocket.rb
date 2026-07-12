@@ -9,6 +9,7 @@ require 'logger'
 require 'monitor'
 require_relative 'websocket/socket_adapter'
 require_relative 'websocket/connection'
+require_relative 'websocket/reconnect'
 require_relative 'websocket/heartbeat'
 require_relative 'websocket/event_handlers'
 
@@ -32,6 +33,7 @@ module RubyAsterisk
     # thread.
     class WebSocket
       include Connection
+      include Reconnect
       include Heartbeat
       include EventHandlers
 
@@ -40,8 +42,11 @@ module RubyAsterisk
       # Ping interval in seconds to keep connection alive
       PING_INTERVAL = 30
 
-      # Reconnect delay in seconds
+      # Reconnect delay in seconds (base for exponential backoff)
       RECONNECT_DELAY = 5
+
+      # Upper bound for the exponential reconnect backoff, in seconds
+      MAX_RECONNECT_DELAY = 60
 
       # Maximum reconnection attempts (nil for infinite)
       MAX_RECONNECT_ATTEMPTS = nil
@@ -139,6 +144,8 @@ module RubyAsterisk
         @connection_thread = nil
         @ping_thread = nil
         @ping_token = nil
+        @awaiting_pong = false
+        @pending_dispatch = nil
         @driver_monitor = Monitor.new
         @wake_mutex = Mutex.new
         @wake_cv = ConditionVariable.new

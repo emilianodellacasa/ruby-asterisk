@@ -15,16 +15,26 @@ module RubyAsterisk
     class Session
       attr_reader :env, :socket
 
-      def initialize(socket, logger: Logger.new($stdout))
-        @socket = socket
-        @logger = logger
-        @env    = {}
+      # @param env_timeout [Numeric, nil] seconds to wait for the initial AGI
+      #   environment block before giving up (guards against slowloris-style
+      #   connect-and-stall clients). Applied only to the handshake, never to
+      #   command reads (which may legitimately block for minutes, e.g. STREAM
+      #   FILE). Pass nil to disable. No-op on Ruby 3.1 (IO#timeout= shim).
+      def initialize(socket, logger: Logger.new($stdout), env_timeout: 10)
+        @socket      = socket
+        @logger      = logger
+        @env         = {}
+        @env_timeout = env_timeout
       end
 
       # Read the initial AGI environment block (agi_key: value lines until blank line).
+      #
+      # @raise [IO::TimeoutError] on Ruby >= 3.2 if the peer stalls beyond env_timeout
       def read_env
-        @env = Protocol.parse_env_block(@socket) do |line|
-          @logger.debug("AGI env: unexpected line: #{line}")
+        with_env_timeout do
+          @env = Protocol.parse_env_block(@socket) do |line|
+            @logger.debug("AGI env: unexpected line: #{line}")
+          end
         end
       end
 
@@ -33,13 +43,20 @@ module RubyAsterisk
       # Handles Asterisk's two-line 520- syntax-error format by accumulating
       # continuation lines until the closing `520 End of proper usage.` line.
       #
+      # Any embedded CR/LF in +command_string+ is stripped before sending: AGI is
+      # a line-oriented protocol, so a newline in a (possibly caller-controlled)
+      # argument or identifier would otherwise inject additional commands.
+      #
       # @param command_string [String]
       # @return [Hash] { code: Integer, result: String|nil, data: String|nil }
       # @raise [RubyAsterisk::Error] on EOF or 5xx response
+      # @raise [RubyAsterisk::HangupError] if Asterisk sends an out-of-band HANGUP
       def execute(command_string)
-        @socket.write("#{command_string}\n")
+        line = command_string.to_s.delete("\r\n")
+        @socket.write("#{line}\n")
         line = @socket.gets
         raise Error, 'Connection closed by Asterisk' unless line
+        raise HangupError, 'Channel hung up' if line.chomp == 'HANGUP'
 
         response = Protocol.parse_response(line)
 
@@ -103,7 +120,9 @@ module RubyAsterisk
       end
 
       # Block until a DTMF digit is pressed or timeout expires.
-      # Returns the decimal ASCII value of the key, or -1 on timeout.
+      # Like every verb this returns the parsed response Hash
+      # { code:, result:, data: }; the pressed key's decimal ASCII value
+      # (or -1 on timeout) is in response[:result].
       def wait_for_digit(timeout_ms = 5000)
         execute("WAIT FOR DIGIT #{timeout_ms}")
       end
@@ -145,6 +164,23 @@ module RubyAsterisk
 
       def database_deltree(family, keytree = nil)
         keytree ? execute("DATABASE DELTREE #{family} #{keytree}") : execute("DATABASE DELTREE #{family}")
+      end
+
+      private
+
+      # Apply @env_timeout to the socket for the duration of the block, then
+      # restore it. No-op when the timeout is nil or the socket does not support
+      # IO#timeout= (Ruby 3.1 shim is a no-op; test doubles simply skip it).
+      def with_env_timeout
+        return yield if @env_timeout.nil? || !@socket.respond_to?(:timeout=)
+
+        previous = @socket.respond_to?(:timeout) ? @socket.timeout : nil
+        @socket.timeout = @env_timeout
+        begin
+          yield
+        ensure
+          @socket.timeout = previous
+        end
       end
     end
   end

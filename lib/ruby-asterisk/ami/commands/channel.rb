@@ -17,11 +17,11 @@ module RubyAsterisk
         end
 
         def originate(channel, context, callee, priority, variable: nil, caller_id: nil, timeout: 30_000, async: nil)
-          @timeout = [@timeout, timeout / 1000].max
           execute 'Originate',
                   { 'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority,
                     'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable,
-                    'Async' => async }
+                    'Async' => async },
+                  timeout: [@timeout, timeout / 1000].max
         end
 
         def originate_app(channel:, application:, data:, async:)
@@ -35,10 +35,10 @@ module RubyAsterisk
         end
 
         def redirect(channel, context, callee, priority, variable: nil, caller_id: nil, timeout: 30_000)
-          @timeout = [@timeout, timeout / 1000].max
           execute 'Redirect',
                   { 'Channel' => channel, 'Context' => context, 'Exten' => callee, 'Priority' => priority,
-                    'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable }
+                    'CallerID' => caller_id || channel, 'Timeout' => timeout.to_s, 'Variable' => variable },
+                  timeout: [@timeout, timeout / 1000].max
         end
 
         def hangup(channel)

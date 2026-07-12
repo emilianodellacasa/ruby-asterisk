@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'ruby-asterisk/version'
+require 'ruby-asterisk/error'
 require 'ruby-asterisk/request'
 require 'ruby-asterisk/response'
 require 'ruby-asterisk/response_builder'
@@ -53,12 +54,15 @@ module RubyAsterisk
       #
       # @return [true, false]
       def connect
-        @reactor = Reactor.new(host, port, on_event: method(:handle_event))
+        @reactor = Reactor.new(host, port,
+                               on_event: method(:handle_event),
+                               on_disconnect: method(:handle_disconnect))
         @reactor.start
         self.connected = true
         true
       rescue StandardError => e
         puts "Connection error: #{e.message}"
+        @reactor = nil
         self.connected = false
         false
       end
@@ -79,6 +83,8 @@ module RubyAsterisk
 
       def login(username:, secret:)
         connect unless connected
+        raise Error, "Unable to connect to AMI at #{host}:#{port}" unless connected
+
         execute 'Login', { 'Username' => username, 'Secret' => secret, 'Event' => 'On' }
       end
 
@@ -91,12 +97,20 @@ module RubyAsterisk
       #
       # @param command [String]  AMI action name (e.g. 'Ping', 'Login')
       # @param options [Hash]    additional AMI headers
+      # @param timeout [Numeric] seconds {Promise#value} waits by default for
+      #   this command only (does not affect other commands)
       # @return [Promise]        call {Promise#value} to obtain the {Response}
-      def execute(command, options = {})
+      # @raise [RubyAsterisk::Error] if the client is not connected
+      def execute(command, options = {}, timeout: @timeout)
+        raise Error, 'Not connected to AMI' unless @reactor
+
         request = Request.new(command, options)
-        promise = Promise.new(action_id: request.action_id, command_type: command, timeout: @timeout)
+        promise = Promise.new(action_id: request.action_id, command_type: command, timeout: timeout)
+        promise.on_timeout = -> { @reactor&.unregister_promise(request.action_id) }
         @reactor.register_promise(request.action_id, promise)
-        request.commands.each { |cmd| @reactor.send_command(cmd) }
+        # Push the whole frame in one operation so commands issued from concurrent
+        # threads cannot interleave their header lines on the wire.
+        @reactor.send_command(request.commands.join)
         promise
       end
 
@@ -104,6 +118,10 @@ module RubyAsterisk
 
       def handle_event(_event)
         # Async events received outside a command cycle — available for future use.
+      end
+
+      def handle_disconnect
+        self.connected = false
       end
     end
   end

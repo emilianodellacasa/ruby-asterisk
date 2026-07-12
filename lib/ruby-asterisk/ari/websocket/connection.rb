@@ -13,19 +13,16 @@ module RubyAsterisk
         def build_url
           uri = URI.parse(@base_url)
           ws_scheme = uri.scheme == 'https' ? 'wss' : 'ws'
-          auth = "#{@api_key}:@"
+          user, pass = @api_key.to_s.split(':', 2)
+          auth = "#{encode_userinfo(user)}:#{encode_userinfo(pass)}@"
+          app = URI.encode_www_form_component(@app_name)
 
-          "#{ws_scheme}://#{auth}#{uri.host}:#{uri.port}/ari/events?app=#{@app_name}"
+          "#{ws_scheme}://#{auth}#{uri.host}:#{uri.port}/ari/events?app=#{app}"
         end
 
-        # Main loop of the connection thread: connect, read until the
-        # connection drops, then reconnect while auto-reconnect is enabled.
-        def connection_loop
-          loop do
-            run_connection
-            break unless @should_reconnect
-            break unless wait_before_reconnect
-          end
+        # URL-encode a userinfo component (user or password), leaving nil as ''
+        def encode_userinfo(component)
+          URI::DEFAULT_PARSER.escape(component.to_s, /[^A-Za-z0-9\-._~]/)
         end
 
         # Run a single connection: establish it and read until it drops.
@@ -54,6 +51,7 @@ module RubyAsterisk
         def open_socket(uri)
           tcp = TCPSocket.new(uri.host, uri.port)
           tcp.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+          tcp.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
           return tcp unless uri.scheme == 'https'
 
           context = OpenSSL::SSL::SSLContext.new
@@ -73,23 +71,46 @@ module RubyAsterisk
           @driver.on(:error) { |event| handle_error(event) }
         end
 
-        # Feed incoming bytes to the driver until the socket closes
+        # Feed incoming bytes to the driver until the socket closes.
+        #
+        # driver.parse dispatches :open/:message synchronously (under
+        # @driver_monitor); handlers only enqueue closures via #defer so user
+        # callbacks run here, after the monitor is released.
         def read_loop
           loop do
             chunk = @socket.readpartial(4096)
-            @driver_monitor.synchronize { @driver.parse(chunk) }
+            pending = []
+            @driver_monitor.synchronize do
+              @pending_dispatch = pending
+              begin
+                @driver.parse(chunk)
+              ensure
+                @pending_dispatch = nil
+              end
+            end
+            dispatch_pending(pending)
           end
         rescue IOError, SystemCallError
           handle_connection_lost
         end
 
-        # The socket dropped without a WebSocket close frame
-        def handle_connection_lost
-          return unless @connected
+        # Run deferred callbacks, containing any exception so it never kills the loop.
+        def dispatch_pending(callbacks)
+          callbacks.each do |callback|
+            callback.call
+          rescue StandardError => e
+            @logger.error "Error dispatching WebSocket event: #{e.message}"
+          end
+        end
 
-          @connected = false
-          stop_ping_timer
-          @logger.warn 'WebSocket connection lost'
+        # Enqueue a closure to run after the driver monitor is released. When
+        # invoked outside an active parse (no dispatch buffer), run immediately.
+        def defer(&block)
+          if @pending_dispatch
+            @pending_dispatch << block
+          else
+            yield
+          end
         end
 
         # Release per-connection resources after the read loop exits
@@ -99,22 +120,6 @@ module RubyAsterisk
           @driver = nil
           @socket = nil
           @connected = false
-        end
-
-        # Wait before the next reconnection attempt
-        #
-        # @return [Boolean] false when reconnection must stop
-        def wait_before_reconnect
-          if MAX_RECONNECT_ATTEMPTS && @reconnect_attempts >= MAX_RECONNECT_ATTEMPTS
-            @logger.error 'Max reconnection attempts reached, giving up'
-            return false
-          end
-
-          @reconnect_attempts += 1
-          @logger.info "Scheduling reconnection attempt #{@reconnect_attempts} in #{@reconnect_delay} seconds"
-
-          wait_or_wake(@reconnect_delay)
-          @should_reconnect
         end
 
         # Send a close frame (if the connection is open) and close the socket

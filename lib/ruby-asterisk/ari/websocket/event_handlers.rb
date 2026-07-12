@@ -11,10 +11,12 @@ module RubyAsterisk
         def handle_open
           @connected = true
           @reconnect_attempts = 0
+          @awaiting_pong = false
           @logger.info 'WebSocket connected successfully'
 
           start_ping_timer
-          @on_connect_callback&.call(self)
+          # Runs after the driver monitor is released (see Connection#read_loop).
+          defer { @on_connect_callback&.call(self) }
         end
 
         # Handle incoming WebSocket message
@@ -26,8 +28,9 @@ module RubyAsterisk
 
           @logger.debug "Received event: #{event_type}"
 
-          # Dispatch to registered callbacks
-          dispatch_event(event_type, data)
+          # Dispatch to registered callbacks after the driver monitor is released
+          # (see Connection#read_loop) so user handlers never run under the monitor.
+          defer { dispatch_event(event_type, data) }
         rescue JSON::ParserError => e
           @logger.error "Failed to parse message: #{e.message}"
         end

@@ -146,4 +146,52 @@ RSpec.describe 'RubyAsterisk::AMI::Client — async behaviour' do
       expect(client.connected).to be false
     end
   end
+
+  # -------------------------------------------------------------------------
+  # A timed-out promise must not leak in the reactor's pending map
+  # -------------------------------------------------------------------------
+  describe 'pending-promise cleanup on timeout' do
+    it 'unregisters the promise after Promise#value times out' do
+      silent_thread, silent_port = MockAMIServer.start { |_sock| sleep 30 }
+
+      begin
+        c = RubyAsterisk::AMI::Client.new(host: 'localhost', port: silent_port)
+        c.connect
+        promise = c.execute('Ping')
+        expect { promise.value(0.2) }.to raise_error(Timeout::Error)
+
+        pending = c.instance_variable_get(:@reactor).instance_variable_get(:@promises)
+        expect(pending).to be_empty
+
+        c.disconnect
+      ensure
+        silent_thread&.kill
+      end
+    end
+  end
+
+  # -------------------------------------------------------------------------
+  # Per-command timeout must not mutate the client-wide default
+  # -------------------------------------------------------------------------
+  describe 'per-command timeout isolation' do
+    it 'does not raise the shared default timeout' do
+      client.connect
+      expect(client.instance_variable_get(:@timeout)).to eq(5)
+
+      client.originate('SIP/100', 'default', '200', '1', timeout: 300_000)
+
+      expect(client.instance_variable_get(:@timeout)).to eq(5)
+      client.disconnect
+    end
+  end
+
+  # -------------------------------------------------------------------------
+  # Commands issued before connect fail loudly rather than hanging
+  # -------------------------------------------------------------------------
+  describe 'guard when not connected' do
+    it 'raises instead of NoMethodError' do
+      fresh = RubyAsterisk::AMI::Client.new(host: 'localhost', port: @port)
+      expect { fresh.execute('Ping') }.to raise_error(RubyAsterisk::Error, /not connected/i)
+    end
+  end
 end

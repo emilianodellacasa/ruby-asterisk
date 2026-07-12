@@ -33,8 +33,7 @@ module RubyAsterisk
         end
 
         def wait_event(timeout: -1)
-          @timeout = [@timeout, timeout].max
-          execute 'WaitEvent', { 'Timeout' => timeout }
+          execute 'WaitEvent', { 'Timeout' => timeout }, timeout: [@timeout, timeout].max
         end
 
         def command(command)

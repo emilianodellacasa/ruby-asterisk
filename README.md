@@ -412,7 +412,10 @@ session.say_number(42, '#*')
 
 ```ruby
 result = session.get_data('enter-pin', timeout: 5000, max_digits: 4)
-digit  = session.wait_for_digit(5000)   # ASCII value or -1 on timeout
+# Like every verb, returns the response Hash; the key's ASCII value
+# (or -1 on timeout) is in response[:result].
+response = session.wait_for_digit(5000)
+digit    = response[:result]
 ```
 
 **Variables**
@@ -534,7 +537,7 @@ Detailed how-to guides for each subsystem are in `.claude/skills/`. Claude Code 
 ```bash
 bundle install
 bundle exec rake spec     # run all tests
-bundle exec rake quality  # RuboCop checks
+bundle exec rubocop       # code quality checks
 ```
 
 Test infrastructure: `spec/support/mock_ami_server.rb` provides a mock AMI server for unit tests.

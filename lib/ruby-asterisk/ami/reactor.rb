@@ -2,6 +2,7 @@
 
 require 'socket'
 require 'ruby-asterisk/ami/parser'
+require 'ruby-asterisk/ami/event_list_aggregation'
 
 module RubyAsterisk
   module AMI
@@ -24,17 +25,22 @@ module RubyAsterisk
     #   - Promise resolution via Mutex+CV (Promise class unchanged).
     #   - No cross-thread IO inside the reactor; one thread reads, one writes.
     class Reactor
-      def initialize(host, port, on_event: nil)
-        @host     = host
-        @port     = port
-        @on_event = on_event
+      include EventListAggregation
+
+      def initialize(host, port, on_event: nil, on_disconnect: nil)
+        @host          = host
+        @port          = port
+        @on_event      = on_event
+        @on_disconnect = on_disconnect
 
         @command_queue  = Thread::Queue.new
         @promises_mutex = Mutex.new
         @promises       = {}
+        @buffers        = {} # action_id => Array<raw frame> for in-flight EventList replies
         @socket         = nil
         @writer_thread  = nil
         @reader_thread  = nil
+        @stopping       = false
       end
 
       # Open the socket, consume the AMI banner, and start both threads.
@@ -62,9 +68,19 @@ module RubyAsterisk
         @promises_mutex.synchronize { @promises[action_id] = promise }
       end
 
+      # Remove a pending Promise without resolving it (e.g. after a caller
+      # timeout) so the pending map does not grow unbounded.
+      def unregister_promise(action_id)
+        @promises_mutex.synchronize do
+          @promises.delete(action_id)
+          @buffers.delete(action_id)
+        end
+      end
+
       # Reject all pending promises with the given error (thread-safe).
       def reject_all_promises(error)
         promises = @promises_mutex.synchronize do
+          @buffers.clear
           @promises.values.tap { @promises.clear }
         end
         promises.each { |p| p.reject(error) }
@@ -74,6 +90,7 @@ module RubyAsterisk
       def stop
         return unless @writer_thread&.alive? || @reader_thread&.alive?
 
+        @stopping = true
         @command_queue.push(:stop) # wakes writer_thread immediately
         @writer_thread&.join(2)
         @reader_thread&.join(2)
@@ -89,8 +106,8 @@ module RubyAsterisk
           break if cmd == :stop
 
           @socket.write(cmd)
-        rescue IOError, Errno::EBADF
-          break
+        rescue IOError, SystemCallError
+          break # socket closed or peer reset — reader_loop handles caller notification
         end
       ensure
         close_socket # raises IOError in reader_thread's readpartial
@@ -104,24 +121,25 @@ module RubyAsterisk
           Parser.drain(buffer) { |msg| dispatch(msg) }
         end
       rescue EOFError
-        reject_all_promises(RuntimeError.new('Disconnected: EOF from server'))
+        handle_unexpected_disconnect('Disconnected: EOF from server')
       rescue IOError, Errno::EBADF
-        # Normal shutdown: writer_loop closed the socket
+        handle_unexpected_disconnect('Disconnected') unless @stopping
       rescue StandardError => e
-        reject_all_promises(RuntimeError.new("Reactor read error: #{e.message}"))
+        handle_unexpected_disconnect("Reactor read error: #{e.message}")
       end
 
-      def dispatch(msg)
-        case msg[:type]
-        when :response
-          resolve_promise(msg[:action_id], msg[:raw])
-        when :event
-          @on_event&.call(msg[:event])
-        end
+      # Notify the client and fail every blocked caller when the link drops
+      # without an explicit #stop request.
+      def handle_unexpected_disconnect(message)
+        @on_disconnect&.call
+        reject_all_promises(RuntimeError.new(message))
       end
 
       def resolve_promise(action_id, raw_data)
-        promise = @promises_mutex.synchronize { @promises.delete(action_id) }
+        promise = @promises_mutex.synchronize do
+          @buffers.delete(action_id)
+          @promises.delete(action_id)
+        end
         promise&.resolve(raw_data)
       end
 

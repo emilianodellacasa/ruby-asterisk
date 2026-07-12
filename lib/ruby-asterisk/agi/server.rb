@@ -73,11 +73,18 @@ module RubyAsterisk
 
       def accept_loop(parent)
         loop do
-          socket = @server.accept
+          begin
+            socket = @server.accept
+          rescue IOError, Errno::EBADF
+            break # server socket closed via stop — normal shutdown
+          rescue SystemCallError => e
+            # Transient accept error (e.g. EMFILE/ENFILE fd exhaustion,
+            # ECONNABORTED): log and keep serving instead of downing the server.
+            @logger.error("AGI accept error: #{e.message}")
+            next
+          end
           parent.async { serve(socket) }
         end
-      rescue IOError, Errno::EBADF
-        # Server socket closed via stop — normal shutdown
       end
 
       def serve(socket)

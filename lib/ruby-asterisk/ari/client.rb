@@ -19,9 +19,14 @@ module RubyAsterisk
 
       def initialize(base_url, api_key, app_name)
         @base_url = base_url
+        @api_key = api_key
         @app_name = app_name
+        # ARI credentials may be supplied as "user:password" (the standard
+        # api_key form). Split on the first colon; a bare key means empty password.
+        user, pass = api_key.to_s.split(':', 2)
+        pass ||= ''
         @connection = Faraday.new(url: base_url) do |conn|
-          conn.request :authorization, :basic, api_key, ''
+          conn.request :authorization, :basic, user, pass
           conn.headers['Content-Type'] = 'application/json'
           conn.headers['Accept'] = 'application/json'
         end

@@ -25,10 +25,12 @@ module RubyAsterisk
 
     def self._parse_objects(response, parse_params)
       object_array = []
-      object_regex = /#{parse_params[:search_for]}\n(.*?)\n\n/m
+      # AMI frames are CRLF-delimited on the wire; tolerate both \r\n and \n so
+      # aggregated multi-event responses parse regardless of line endings.
+      object_regex = /#{parse_params[:search_for]}\r?\n(.*?)\r?\n\r?\n/m
       response.join.scan(object_regex) do |match|
         object = {}
-        match[0].split("\n").each do |line|
+        match[0].split(/\r?\n/).each do |line|
           tokens = line.split(':', 2)
           object[tokens[0].strip] = tokens[1].strip unless tokens[1].nil?
         end

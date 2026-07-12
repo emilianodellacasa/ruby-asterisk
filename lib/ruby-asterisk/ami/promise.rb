@@ -23,6 +23,10 @@ module RubyAsterisk
     class Promise
       attr_reader :action_id
 
+      # Optional callback invoked when {#value} gives up on a timeout, used by
+      # the Reactor to drop the abandoned entry from its pending map.
+      attr_accessor :on_timeout
+
       # @param action_id    [String]  the AMI ActionID this promise tracks
       # @param command_type [String]  the AMI action name (e.g. 'Ping')
       # @param timeout      [Numeric] default seconds to wait in #value
@@ -35,6 +39,7 @@ module RubyAsterisk
         @raw          = nil
         @error        = nil
         @resolved     = false
+        @on_timeout   = nil
       end
 
       # Resolve the promise with raw AMI response data.
@@ -72,6 +77,7 @@ module RubyAsterisk
           unless @resolved
             @cv.wait(@mutex, timeout)
             unless @resolved
+              @on_timeout&.call
               raise Timeout::Error,
                     "Timeout waiting for AMI response (ActionID: #{@action_id})"
             end

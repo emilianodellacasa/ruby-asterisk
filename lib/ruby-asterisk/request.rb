@@ -8,6 +8,9 @@ module RubyAsterisk
   class Request
     attr_reader :action, :action_id, :parameters
 
+    @id_mutex   = Mutex.new
+    @id_counter = 0
+
     def initialize(action, parameters = {})
       @action = action.freeze
       @action_id = Request.generate_action_id.freeze
@@ -24,8 +27,11 @@ module RubyAsterisk
       command_list
     end
 
+    # Monotonic timestamp plus a process-wide atomic counter, so two calls made
+    # within the same nanosecond (or across an NTP clock step-back) never collide.
     def self.generate_action_id
-      Process.clock_gettime(Process::CLOCK_REALTIME, :nanosecond).to_s(36)
+      count = @id_mutex.synchronize { @id_counter += 1 }
+      "#{Process.clock_gettime(Process::CLOCK_MONOTONIC, :nanosecond).to_s(36)}-#{count.to_s(36)}"
     end
 
     private

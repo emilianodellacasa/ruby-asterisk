@@ -37,7 +37,9 @@ module RubyAsterisk
     def _parse(field)
       raw_response.each do |data|
         data.each_line do |line|
-          return line[(line.rindex(':') + 1)..line.size].strip if line.start_with?(field)
+          # Split only on the field's own colon so values that themselves contain
+          # ':' (e.g. "Message: Call failed: no route") are not truncated.
+          return line[field.length..].strip if line.start_with?(field)
         end
       end
       nil
