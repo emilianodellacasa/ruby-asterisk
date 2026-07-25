@@ -1,0 +1,84 @@
+# frozen_string_literal: true
+
+plugins:
+  - rubocop-performance
+
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  SuggestExtensions: false
+
+# Crucial for Ractor compatibility - all files must have frozen string literal comment
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+
+# Enforce single quotes unless interpolation is needed
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: single_quotes
+
+# Set reasonable limits but exclude large classes that group related commands
+Metrics/ClassLength:
+  Enabled: true
+  Max: 100
+  Exclude:
+    - 'lib/ruby-asterisk/ami/client.rb'
+    - 'lib/ruby-asterisk/agi/session.rb'
+
+# Reasonable method length
+Metrics/MethodLength:
+  Enabled: true
+  Max: 15
+  Exclude:
+    - 'spec/**/*'
+
+# Allow longer blocks in specs
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - '*.gemspec'
+
+# Allow longer lines for readability in some cases
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'spec/**/*'
+
+# Gemspec file uses string literals from git commands
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+# We explicitly use add_runtime_dependency for clarity about dependency types
+Gemspec/AddRuntimeDependency:
+  Enabled: false
+
+# Exclude legacy AMI class from parameter list checks until refactored
+Metrics/ParameterLists:
+  Exclude:
+    - 'lib/ruby-asterisk.rb'
+  CountKeywordArgs: false
+
+# Exclude legacy AMI class from optional boolean parameter checks
+Style/OptionalBooleanParameter:
+  Exclude:
+    - 'lib/ruby-asterisk.rb'
+
+# The gem filename follows rubygems convention (gem-name.rb)
+Naming/FileName:
+  Exclude:
+    - 'lib/ruby-asterisk.rb'
+
+# Exclude response parser complexity until refactored
+Metrics/AbcSize:
+  Exclude:
+    - 'lib/ruby-asterisk/response_parser.rb'
+
+# Keep `success` method name for backwards compatibility (not success?)
+Naming/PredicateMethod:
+  Exclude:
+    - 'lib/ruby-asterisk/response.rb'
+
+Lint/SuppressedException:
+  Exclude:
+    - 'spec/support/mock_ami_server.rb'

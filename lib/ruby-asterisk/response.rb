@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'ruby-asterisk/response_parser'
 
 module RubyAsterisk
@@ -6,43 +8,68 @@ module RubyAsterisk
   # Class for response coming from Asterisk
   #
   class Response
-    attr_accessor :type, :action_id, :message, :data, :raw_response
+    attr_reader :type, :action_id, :message, :data, :raw_response
 
-    def initialize(type,response)
-      self.raw_response = response
-      self.type = type
-      self.action_id = self._parse_action_id
-      self.message = self._parse_message
-      self.data = self._parse_response
+    def initialize(type, response)
+      @raw_response = [response].flatten
+      @type = type
+      @action_id = _parse_action_id
+      @message = _parse_message
+      @data = _parse_response
+      deep_freeze
+      freeze
     end
 
     def success
-      self.raw_response.include?("Response: Success")
+      raw_response.join.include?('Response: Success')
     end
 
     protected
 
     def _parse_action_id
-      self._parse("ActionID:")
+      _parse('ActionID:')
     end
 
     def _parse_message
-      self._parse("Message:")
+      _parse('Message:')
     end
 
     def _parse(field)
-      _value = nil
-      self.raw_response.each_line do |line|
-        if line.start_with?(field)
-          _value = line[line.rindex(":")+1..line.size].strip
+      raw_response.each do |data|
+        data.each_line do |line|
+          # Split only on the field's own colon so values that themselves contain
+          # ':' (e.g. "Message: Call failed: no route") are not truncated.
+          return line[field.length..].strip if line.start_with?(field)
         end
       end
-      _value
+      nil
     end
 
     def _parse_response
-      ResponseParser.parse(self.raw_response, self.type)
+      ResponseParser.parse(raw_response, type)
     end
 
+    private
+
+    def deep_freeze
+      @type.freeze
+      @action_id.freeze
+      @message.freeze
+      deep_freeze_value(@raw_response)
+      deep_freeze_value(@data)
+    end
+
+    def deep_freeze_value(obj)
+      case obj
+      when Hash
+        obj.each do |key, value|
+          key.freeze
+          deep_freeze_value(value)
+        end
+      when Array
+        obj.each { |element| deep_freeze_value(element) }
+      end
+      obj.freeze
+    end
   end
 end

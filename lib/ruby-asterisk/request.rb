@@ -1,31 +1,50 @@
+# frozen_string_literal: true
+
 module RubyAsterisk
   ##
   #
   # Class responsible of building commands structure
   #
   class Request
-    attr_accessor :action, :action_id, :parameters, :response_data
+    attr_reader :action, :action_id, :parameters
 
-    def initialize(action, parameters = {})
-      self.action = action
-      self.action_id = Request.generate_action_id
-      self.parameters = parameters
-      self.response_data = ''
+    @id_mutex   = Mutex.new
+    @id_counter = 0
+
+    # @param action     [String] AMI action name
+    # @param parameters [Hash]   additional AMI headers
+    # @param action_id  [String, nil] ActionID to use; a generated one when nil.
+    #   Passing it here (rather than as a parameter) keeps a single ActionID
+    #   header on the wire, so responses still correlate with their Promise.
+    def initialize(action, parameters = {}, action_id: nil)
+      @action = action.freeze
+      @action_id = (action_id || Request.generate_action_id).to_s.freeze
+      @parameters = deep_freeze_hash(parameters)
+      freeze
     end
 
     def commands
-      _commands = ["Action: #{self.action}\r\n", "ActionID: #{self.action_id}\r\n"]
-      self.parameters.each do |key, value|
-        _commands<<"#{key.to_s}: #{value.to_s}\r\n" unless value.nil?
+      command_list = ["Action: #{action}\r\n", "ActionID: #{action_id}\r\n"]
+      parameters.each do |key, value|
+        command_list << "#{key}: #{value}\r\n" unless value.nil?
       end
-      _commands[_commands.length - 1] << "\r\n"
-      _commands
+      command_list[-1] << "\r\n"
+      command_list
     end
 
-    protected
-
+    # Monotonic timestamp plus a process-wide atomic counter, so two calls made
+    # within the same nanosecond (or across an NTP clock step-back) never collide.
     def self.generate_action_id
-      Process.clock_gettime(Process::CLOCK_REALTIME, :nanosecond).to_s(36)
+      count = @id_mutex.synchronize { @id_counter += 1 }
+      "#{Process.clock_gettime(Process::CLOCK_MONOTONIC, :nanosecond).to_s(36)}-#{count.to_s(36)}"
+    end
+
+    private
+
+    def deep_freeze_hash(hash)
+      hash.each_with_object({}) do |(key, value), result|
+        result[key.freeze] = value.freeze
+      end.freeze
     end
   end
 end

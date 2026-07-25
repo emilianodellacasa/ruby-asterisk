@@ -1,7 +1,7 @@
-# encoding: utf-8
+# frozen_string_literal: true
+
 require 'spec_helper'
 describe RubyAsterisk::Response do
-
   def sip_peers_response
     "Response: Success
      Message: Peer status list will follow
@@ -96,90 +96,89 @@ describe RubyAsterisk::Response do
     Status: 0\n\n"
   end
 
-  describe ".new" do
-
-    describe "receiving a Core Show Channels request" do
-      it "should parse correctly data coming from Asterisk about channels" do
-        @response = RubyAsterisk::Response.new("CoreShowChannels",core_show_channels_response)
+  describe '.new' do
+    describe 'receiving a Core Show Channels request' do
+      it 'should parse correctly data coming from Asterisk about channels' do
+        @response = RubyAsterisk::Response.new('CoreShowChannels', [core_show_channels_response])
         @response.data[:channels].should_not be_empty
       end
 
-      it "should correctly fill the fields" do
-        @response = RubyAsterisk::Response.new("CoreShowChannels",core_show_channels_response)
-        @response.data[:channels][0]["CallerIDnum"].should eq("123456")
+      it 'should correctly fill the fields' do
+        @response = RubyAsterisk::Response.new('CoreShowChannels', [core_show_channels_response])
+        @response.data[:channels][0]['CallerIDnum'].should eq('123456')
       end
 
-      it "should have no channels if answer is empty" do
-        @response = RubyAsterisk::Response.new("CoreShowChannels",empty_core_show_channels_response)
+      it 'should have no channels if answer is empty' do
+        @response = RubyAsterisk::Response.new('CoreShowChannels', [empty_core_show_channels_response])
         @response.data[:channels].count.should eq(0)
       end
     end
 
-    describe "receiving a Parked Calls request" do
-      it "should parse correctly data coming from Asterisk about calls" do
-        @response = RubyAsterisk::Response.new("ParkedCalls",parked_calls_response)
+    describe 'receiving a Parked Calls request' do
+      it 'should parse correctly data coming from Asterisk about calls' do
+        @response = RubyAsterisk::Response.new('ParkedCalls', [parked_calls_response])
         @response.data[:calls].should_not be_empty
       end
 
-      it "should correctly fill the fields" do
-        @response = RubyAsterisk::Response.new("ParkedCalls",parked_calls_response)
-        @response.data[:calls][0]["Exten"].should eq("701")
+      it 'should correctly fill the fields' do
+        @response = RubyAsterisk::Response.new('ParkedCalls', [parked_calls_response])
+        @response.data[:calls][0]['Exten'].should eq('701')
       end
     end
 
-    describe "receiving a Originate request" do
-      it "should parse correctly data coming from Asterisk about the call" do
-        @response = RubyAsterisk::Response.new("Originate",originate_response)
+    describe 'receiving a Originate request' do
+      it 'should parse correctly data coming from Asterisk about the call' do
+        @response = RubyAsterisk::Response.new('Originate', [originate_response])
         @response.data[:dial].should_not be_empty
       end
 
-      it "should correctly fill the fields" do
-        @response = RubyAsterisk::Response.new("Originate",originate_response)
-        @response.data[:dial][0]["UniqueID"].should eq("1335457364.68")
+      it 'should correctly fill the fields' do
+        @response = RubyAsterisk::Response.new('Originate', [originate_response])
+        @response.data[:dial][0]['UniqueID'].should eq('1335457364.68')
       end
 
-      it "should have a field with original raw response" do
-        @response = RubyAsterisk::Response.new("Originate",originate_response)
-        @response.raw_response.should eq(originate_response)
+      it 'should have a field with original raw response' do
+        @response = RubyAsterisk::Response.new('Originate', [originate_response])
+        @response.raw_response.join.should eq(originate_response)
       end
     end
 
-    describe "receiving a MeetMeList request" do
-      it "should parse correctly data coming from Asterisk about the conference room" do
-        @response = RubyAsterisk::Response.new("MeetMeList",meet_me_list_response)
+    describe 'receiving a MeetMeList request' do
+      it 'should parse correctly data coming from Asterisk about the conference room' do
+        @response = RubyAsterisk::Response.new('MeetMeList', [meet_me_list_response])
         @response.data[:rooms].should_not be_empty
       end
 
-      it "should correctly fill the fields" do
-        @response = RubyAsterisk::Response.new("MeetMeList",meet_me_list_response)
-        @response.data[:rooms][0]["Conference"].should eq("1234")
+      it 'should correctly fill the fields' do
+        @response = RubyAsterisk::Response.new('MeetMeList', [meet_me_list_response])
+        @response.data[:rooms][0]['Conference'].should eq('1234')
       end
     end
 
-    describe "receiving a ExtensionState request" do
-      it "should parse correctly data coming from Asterisk about the state of the extension" do
-        @response = RubyAsterisk::Response.new("ExtensionState",extension_state_response)
+    describe 'receiving a ExtensionState request' do
+      it 'should parse correctly data coming from Asterisk about the state of the extension' do
+        @response = RubyAsterisk::Response.new('ExtensionState', [extension_state_response])
         @response.data[:hints].should_not be_empty
       end
 
-      it "should correctly fill the fields" do
-        @response = RubyAsterisk::Response.new("ExtensionState",extension_state_response)
-        @response.data[:hints][0]["Status"].should eq("0")
-        @response.data[:hints][0]["DescriptiveStatus"].should eq("Idle")
+      it 'should correctly fill the fields' do
+        @response = RubyAsterisk::Response.new('ExtensionState', [extension_state_response])
+        @response.data[:hints][0]['Status'].should eq('0')
+        @response.data[:hints][0]['DescriptiveStatus'].should eq('Idle')
       end
     end
   end
 
-  describe "receiving a SIPPeers request" do
-    it "should parse correctly data coming from Asterisk abous sip peers" do
-      @response = RubyAsterisk::Response.new("SIPpeers",sip_peers_response)
+  describe 'receiving a SIPPeers request' do
+    it 'should parse correctly data coming from Asterisk abous sip peers' do
+      @response = RubyAsterisk::Response.new('SIPpeers', [sip_peers_response])
       @response.data[:peers].should_not be_empty
     end
 
-    it "should correctly fill the fields" do
-      @response = RubyAsterisk::Response.new("SIPpeers",sip_peers_response)
-      @response.data[:peers][0]["ObjectName"].should eq("9915057")
-      @response.data[:peers][0]["IPport"].should eq("5060")
+    it 'should correctly fill the fields' do
+      @response = RubyAsterisk::Response.new('SIPpeers', [sip_peers_response])
+      @response.data[:peers][0]['ObjectName'].should eq('9915057')
+      @response.data[:peers][0]['IPport'].should eq('5060')
     end
   end
 end
