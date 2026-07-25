@@ -100,12 +100,17 @@ module RubyAsterisk
 
       private
 
+      # Both loops bind the socket to a local before their first IO call:
+      # #close_socket nils out @socket, so reading the ivar inside the loop could
+      # raise NoMethodError on nil instead of the IOError the rescues expect.
+      # A closed IO object still raises IOError, which is the intended path.
       def writer_loop
+        socket = @socket
         loop do
           cmd = @command_queue.pop
           break if cmd == :stop
 
-          @socket.write(cmd)
+          socket.write(cmd)
         rescue IOError, SystemCallError
           break # socket closed or peer reset — reader_loop handles caller notification
         end
@@ -114,18 +119,21 @@ module RubyAsterisk
       end
 
       def reader_loop
+        socket = @socket
         buffer = +''
         loop do
-          chunk = @socket.readpartial(4096)
+          chunk = socket.readpartial(4096)
           buffer << chunk
           Parser.drain(buffer) { |msg| dispatch(msg) }
         end
       rescue EOFError
-        handle_unexpected_disconnect('Disconnected: EOF from server')
+        handle_unexpected_disconnect('Disconnected: EOF from server') unless @stopping
       rescue IOError, Errno::EBADF
         handle_unexpected_disconnect('Disconnected') unless @stopping
       rescue StandardError => e
-        handle_unexpected_disconnect("Reactor read error: #{e.message}")
+        # A deliberate #stop must never surface as a disconnect: the caller is
+        # notified by Client#disconnect, which rejects with its own message.
+        handle_unexpected_disconnect("Reactor read error: #{e.message}") unless @stopping
       end
 
       # Notify the client and fail every blocked caller when the link drops

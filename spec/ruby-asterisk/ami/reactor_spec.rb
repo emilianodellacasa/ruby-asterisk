@@ -53,6 +53,43 @@ RSpec.describe RubyAsterisk::AMI::Reactor do
         reactor.stop
       end.not_to raise_error
     end
+
+    # #stop closes the socket from the writer thread while the reader thread sits
+    # in readpartial: that must surface as a clean shutdown, never as a disconnect
+    # notification or a rejected promise.
+    describe 'deliberate stop' do
+      let(:disconnects) { Thread::Queue.new }
+      let(:pending_promise) do
+        RubyAsterisk::AMI::Promise.new(action_id: 'stop-race', command_type: 'Ping', timeout: 1)
+      end
+
+      def stopped_reactor
+        reactor = described_class.new('localhost', @port, on_disconnect: -> { disconnects << :called })
+        reactor.start
+        reactor.register_promise('stop-race', pending_promise)
+        reactor.send_command("Action: Ping\r\nActionID: stop-race\r\n\r\n")
+        reactor.stop
+        reactor
+      end
+
+      it 'does not notify a disconnect nor reject pending promises' do
+        stopped_reactor
+
+        expect(disconnects).to be_empty
+        expect(pending_promise).not_to be_resolved
+      end
+
+      # Replays what the reader thread does when it is scheduled only after the
+      # socket has already been closed and cleared: no notification either way.
+      it 'stays silent when the reader loop runs after the socket is gone' do
+        reactor = stopped_reactor
+
+        reactor.send(:reader_loop)
+
+        expect(disconnects).to be_empty
+        expect(pending_promise).not_to be_resolved
+      end
+    end
   end
 
   # ── command delivery ──────────────────────────────────────────────────────
