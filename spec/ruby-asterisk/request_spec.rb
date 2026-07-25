@@ -13,4 +13,25 @@ describe RubyAsterisk::Request do
       request.commands.include?('Variable: var=15').should == false
     end
   end
+
+  describe 'action_id' do
+    it 'generates one when none is supplied' do
+      request = RubyAsterisk::Request.new('Ping')
+
+      expect(request.action_id).not_to be_empty
+      expect(request.commands.join).to include("ActionID: #{request.action_id}\r\n")
+    end
+
+    it 'uses the supplied action_id' do
+      request = RubyAsterisk::Request.new('Status', {}, action_id: 'my-own-id')
+
+      expect(request.action_id).to eq('my-own-id')
+    end
+
+    it 'emits exactly one ActionID header' do
+      request = RubyAsterisk::Request.new('Status', { 'Channel' => 'SIP/alice' }, action_id: 'my-own-id')
+
+      expect(request.commands.join.scan(/^ActionID:/).size).to eq(1)
+    end
+  end
 end

@@ -7,12 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [1.0.0] - 2026-07-25
 
-- **ARI WebSocket without EventMachine** — replaced `faye-websocket` + `eventmachine` with the pure Ruby `websocket-driver` gem over a plain `TCPSocket` (`SSLSocket` for https): a connection thread owns connect/read-loop/auto-reconnect, a ping thread sends keep-alives, and driver access is serialized through a reentrant Monitor so `send_message?` is thread-safe. Public `WebSocket` API and wire protocol are unchanged. Fixes `bundle install` on ruby-head (4.1.0-dev), where `eventmachine` 1.2.7 no longer compiles (`Data_Wrap_Struct` removed from the C API) (#82).
-- **AMI reactor** — replaced the experimental Ractor pipeline (`SocketReaderRactor` + `ParserRactor` + event-loop Thread) with two plain OS threads (reader + writer) around a pure `Parser` module; plain Threads give deterministic shutdown on all Ruby ≥ 3.1. Public `Client` API is unchanged; `Promise` (Mutex+CV) is unchanged. Removes experimental Ractor warnings, CI GC workarounds, and the `sleep 0.2` suite teardown (#79).
-
-## [1.0.0] - 2026-05-12
+First release of the rewritten gem: three interfaces (AMI, ARI, AGI) on Ruby ≥ 3.1.
 
 ### Added
 
@@ -20,10 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AGI::Protocol env helpers** — `parse_env_line`, `parse_env_block`, `collect_multiline_error` for robust Asterisk environment parsing and 520 multi-line error handling (#56)
 - **AGI::Session** — full FastAGI session wrapper with fiber-friendly socket I/O: `answer`, `hangup`, `stream_file`, `say_digits`, `say_number`, `exec`, `set_variable`, `get_variable`, `get_data`, `verbose`, `dial`, `wait_for_digit`, `record_file`, `send_text`, `send_image`, `channel_status`, `database_get/put/del/deltree` (#55)
 - **AGI::Server** — FastAGI TCP server backed by Async + Fiber scheduler; each connection runs in its own Fiber sharing a single OS thread (#54)
-- **ARI::WebSocket** — WebSocket client for ARI real-time events: per-event callbacks via `on(type, &block)`, auto-reconnect, configurable ping keep-alive (#53)
+- **ARI::WebSocket** — WebSocket client for ARI real-time events: per-event callbacks via `on(type, &block)`, auto-reconnect, configurable ping keep-alive. Built on the pure Ruby `websocket-driver` gem over a plain `TCPSocket` (`SSLSocket` for https) — no EventMachine, so it installs and runs on every supported Ruby including 4.x: a connection thread owns connect/read-loop/reconnect, a ping thread sends keep-alives, and driver access is serialized through a reentrant Monitor so `send_message?` is thread-safe (#53, #82)
 - **ARI::Client** — HTTP client for the Asterisk REST Interface backed by Faraday (#51)
 - **ARI::Resources** — Channel, Bridge, Playback, Endpoint, Collection, and Base resource classes for the ARI HTTP client (#52)
-- **AMI::Client async rewrite** — non-blocking AMI client using `SocketReaderRactor` + `ParserRactor` + `Promise`-based responses; every command returns a `Promise`, call `.value(timeout)` to materialise the `Response` (#48, #49, #50)
+- **AMI::Client async rewrite** — non-blocking AMI client with `Promise`-based responses: every command returns a `Promise`, call `.value(timeout)` to materialise the `Response`. The connection lives in a `Reactor` made of two plain OS threads (reader + writer) around the stateless `Parser` module, which gives deterministic shutdown on all Ruby ≥ 3.1 (#48, #49, #50, #79)
 - **AMI command modules** — Channel, Conference, Extension, Mailbox, Monitor, Queue, Sip, System extracted into dedicated modules and mixed into `AMI::Client` (#47)
 - `logoff` method on `AMI::Client`
 
@@ -37,12 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Ruby 3.1 compatibility: `IO#timeout` / `IO#timeout=` shim added at the top of `agi/server.rb`; the `async` gem's Fiber scheduler calls `io.timeout` in Ruby 3.2+ — returning `nil` on 3.1 disables that code path without breaking async I/O (#55).
-- Robust Ractor cleanup and error handling on `AMI::Client#disconnect` (#50).
+- Ruby 3.1 compatibility: `IO#timeout` / `IO#timeout=` shim in `lib/ruby-asterisk/compat.rb`; the `async` gem's Fiber scheduler calls `io.timeout` in Ruby 3.2+ — returning `nil` on 3.1 disables that code path without breaking async I/O (#55).
+- Deterministic teardown on `AMI::Client#disconnect`: both reactor threads are joined and every pending `Promise` is rejected instead of being left dangling (#50, #79).
+- A caller-supplied `action_id:` (`status`, `extension_state`) is now used as the request's ActionID instead of being appended as a second `ActionID` header, which left the response uncorrelated with its `Promise`.
+- `wait_event(timeout: -1)` no longer imposes a 5 s deadline on the returned `Promise`: a negative Timeout means Asterisk waits indefinitely, so `#value` now does too.
 
 ### Removed
 
-- `Net::Telnet` dependency (replaced by raw `TCPSocket` via Ractor pipeline).
+- `Net::Telnet` dependency (replaced by a raw `TCPSocket` owned by the AMI `Reactor`).
 
 ---
 

@@ -11,9 +11,14 @@ module RubyAsterisk
     @id_mutex   = Mutex.new
     @id_counter = 0
 
-    def initialize(action, parameters = {})
+    # @param action     [String] AMI action name
+    # @param parameters [Hash]   additional AMI headers
+    # @param action_id  [String, nil] ActionID to use; a generated one when nil.
+    #   Passing it here (rather than as a parameter) keeps a single ActionID
+    #   header on the wire, so responses still correlate with their Promise.
+    def initialize(action, parameters = {}, action_id: nil)
       @action = action.freeze
-      @action_id = Request.generate_action_id.freeze
+      @action_id = (action_id || Request.generate_action_id).to_s.freeze
       @parameters = deep_freeze_hash(parameters)
       freeze
     end

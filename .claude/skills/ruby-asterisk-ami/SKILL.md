@@ -37,11 +37,11 @@ response = promise.value(10) # custom timeout in seconds
 
 ```ruby
 ami = RubyAsterisk::AMI::Client.new(host: '192.168.1.1', port: 5038)
-ami.connect                                        # starts Ractors + event loop
+ami.connect                                        # starts the reader + writer threads
 ami.login(username: 'admin', secret: 'secret').value
 # ... use commands ...
 ami.logoff.value
-ami.disconnect                                     # stops Ractors, rejects pending promises
+ami.disconnect                                     # stops both threads, rejects pending promises
 ```
 
 `login` auto-calls `connect` if not already connected.
@@ -54,7 +54,7 @@ ami.disconnect                                     # stops Ractors, rejects pend
 |---|---|---|
 | `ping` | `Ping` | Returns `Pong` response |
 | `command(cmd)` | `Command` | CLI passthrough, e.g. `'core show channels'` |
-| `wait_event(timeout: -1)` | `WaitEvent` | -1 = wait forever; bumps `@timeout` |
+| `wait_event(timeout: -1)` | `WaitEvent` | negative = wait forever, so `#value` has no deadline; a positive value bounds it (floor: the client default) |
 | `event_mask(mask = 'off')` | `Events` | `'on'` / `'off'` / `'system,call'` |
 | `parked_calls` | `ParkedCalls` | |
 | `device_state_list` | `DeviceStateList` | |
@@ -168,9 +168,9 @@ end
 
 ## Gotchas
 
-- **ActionID is auto-generated** (nanosecond timestamp in base36) — never pass a duplicate ActionID.
-- **Call `event_mask('on')`** on the connection if you need Asterisk to push async events (e.g. `StasisStart`). Off by default.
-- **`wait_event` bumps `@timeout`** on the client instance — be aware if you share the client across threads.
+- **ActionID is auto-generated** (monotonic nanosecond clock in base36 plus an atomic counter). A caller-supplied `action_id:` replaces it — including in the `Promise` used for correlation — so it must be unique among in-flight commands.
+- **Call `event_mask('on')`** on the connection if you need Asterisk to push async events (e.g. `StasisStart`). Off by default. Note that `AMI::Client` currently discards received events: there is no public subscription API yet.
+- **`timeout:` is per command** and never mutates the client-wide default; `wait_event(timeout: -1)` builds a promise with no deadline, so bound it with `value(seconds)` if you must not block forever.
 - **`disconnect` rejects all pending promises** — check for `RuntimeError` if you disconnect mid-flight.
 - **`PARSE_DATA`** (`lib/ruby-asterisk/parsing_constants.rb`) controls which responses get structured `data`; unlisted actions return the raw string.
 - The version constant is now `RubyAsterisk::VERSION` (was `Rami::VERSION` before 1.0.0).
@@ -178,6 +178,8 @@ end
 ## Source files
 
 - `lib/ruby-asterisk/ami/client.rb` — `Client` class
+- `lib/ruby-asterisk/ami/reactor.rb` — reader/writer threads owning the socket
+- `lib/ruby-asterisk/ami/parser.rb` — stateless AMI frame parser
 - `lib/ruby-asterisk/ami/promise.rb` — `Promise` class
 - `lib/ruby-asterisk/ami/commands/*.rb` — command modules
 - `lib/ruby-asterisk/response.rb` — `Response` class

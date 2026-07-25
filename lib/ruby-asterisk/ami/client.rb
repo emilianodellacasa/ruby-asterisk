@@ -95,16 +95,23 @@ module RubyAsterisk
       ##
       # Send an AMI command asynchronously.
       #
+      # A caller-supplied 'ActionID' option becomes the request's own ActionID
+      # instead of an extra header: two ActionID lines in one frame would leave
+      # the response uncorrelated with its Promise.
+      #
       # @param command [String]  AMI action name (e.g. 'Ping', 'Login')
       # @param options [Hash]    additional AMI headers
-      # @param timeout [Numeric] seconds {Promise#value} waits by default for
-      #   this command only (does not affect other commands)
+      # @param timeout [Numeric, nil] seconds {Promise#value} waits by default
+      #   for this command only (does not affect other commands); nil waits
+      #   indefinitely
       # @return [Promise]        call {Promise#value} to obtain the {Response}
       # @raise [RubyAsterisk::Error] if the client is not connected
       def execute(command, options = {}, timeout: @timeout)
         raise Error, 'Not connected to AMI' unless @reactor
 
-        request = Request.new(command, options)
+        options   = options.dup
+        action_id = options.delete('ActionID')
+        request   = Request.new(command, options, action_id: action_id)
         promise = Promise.new(action_id: request.action_id, command_type: command, timeout: timeout)
         promise.on_timeout = -> { @reactor&.unregister_promise(request.action_id) }
         @reactor.register_promise(request.action_id, promise)

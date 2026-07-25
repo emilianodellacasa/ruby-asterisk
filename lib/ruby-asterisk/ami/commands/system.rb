@@ -32,8 +32,13 @@ module RubyAsterisk
           execute 'Events', { 'EventMask' => event_mask }
         end
 
+        # A negative Timeout tells Asterisk to wait indefinitely, so the Promise
+        # must not impose a deadline either: #value then blocks until an event
+        # arrives (pass an explicit `value(seconds)` to bound the wait).
         def wait_event(timeout: -1)
-          execute 'WaitEvent', { 'Timeout' => timeout }, timeout: [@timeout, timeout].max
+          seconds = timeout.to_i
+          execute 'WaitEvent', { 'Timeout' => timeout },
+                  timeout: (seconds.negative? ? nil : [@timeout, seconds].max)
         end
 
         def command(command)

@@ -186,6 +186,65 @@ RSpec.describe 'RubyAsterisk::AMI::Client — async behaviour' do
   end
 
   # -------------------------------------------------------------------------
+  # A caller-supplied ActionID replaces the generated one instead of being
+  # appended as a second ActionID header (which would break correlation)
+  # -------------------------------------------------------------------------
+  describe 'caller-supplied ActionID' do
+    it 'sends exactly one ActionID header and still resolves the promise' do
+      frames = Thread::Queue.new
+      echo_thread, echo_port = MockAMIServer.start do |sock|
+        buf = +''
+        while (line = sock.gets)
+          buf << line
+          next unless ASYNC_NEWLINES.include?(line)
+
+          frames << buf.dup
+          sock.print "Response: Success\r\nActionID: #{buf[/ActionID: (\S+)/, 1]}\r\n\r\n"
+          buf.clear
+        end
+      end
+
+      begin
+        c = RubyAsterisk::AMI::Client.new(host: 'localhost', port: echo_port)
+        c.connect
+        response = c.status(channel: 'SIP/alice-001', action_id: 'custom-id').value(2)
+
+        frame = frames.pop
+        expect(frame.scan(/^ActionID:/).size).to eq(1)
+        expect(frame).to include("ActionID: custom-id\r\n")
+        expect(response.success).to be true
+
+        c.disconnect
+      ensure
+        echo_thread&.kill
+      end
+    end
+  end
+
+  # -------------------------------------------------------------------------
+  # WaitEvent with a negative Timeout must not impose a Promise deadline
+  # -------------------------------------------------------------------------
+  describe '#wait_event' do
+    it 'leaves the promise without a deadline when Timeout is negative' do
+      client.connect
+
+      promise = client.wait_event(timeout: -1)
+
+      expect(promise.instance_variable_get(:@timeout)).to be_nil
+      client.disconnect
+    end
+
+    it 'keeps the client default as the floor for a positive Timeout' do
+      client.connect
+
+      promise = client.wait_event(timeout: 30)
+
+      expect(promise.instance_variable_get(:@timeout)).to eq(30)
+      client.disconnect
+    end
+  end
+
+  # -------------------------------------------------------------------------
   # Commands issued before connect fail loudly rather than hanging
   # -------------------------------------------------------------------------
   describe 'guard when not connected' do

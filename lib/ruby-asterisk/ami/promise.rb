@@ -29,7 +29,8 @@ module RubyAsterisk
 
       # @param action_id    [String]  the AMI ActionID this promise tracks
       # @param command_type [String]  the AMI action name (e.g. 'Ping')
-      # @param timeout      [Numeric] default seconds to wait in #value
+      # @param timeout      [Numeric, nil] default seconds to wait in #value;
+      #   nil waits indefinitely (used by WaitEvent with a negative Timeout)
       def initialize(action_id:, command_type:, timeout: 5)
         @action_id    = action_id
         @command_type = command_type
@@ -68,7 +69,8 @@ module RubyAsterisk
 
       # Block until the response arrives and return it as a {Response}.
       #
-      # @param timeout [Numeric] seconds to wait (defaults to the value set at construction)
+      # @param timeout [Numeric, nil] seconds to wait (defaults to the value set
+      #   at construction); nil blocks until the response arrives
       # @return [RubyAsterisk::Response]
       # @raise [Timeout::Error]  if no response arrives within +timeout+ seconds
       # @raise [RuntimeError]   if the promise was rejected (e.g. disconnect)

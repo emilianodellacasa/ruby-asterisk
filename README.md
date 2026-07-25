@@ -76,7 +76,8 @@ ami.logoff.value
 ```ruby
 ami.ping.value
 ami.command('core show channels').value
-ami.wait_event(timeout: -1).value     # -1 = wait forever
+ami.wait_event(timeout: -1).value     # -1 = wait forever: .value blocks until an event arrives
+ami.wait_event(timeout: 30).value     # bounded wait; .value gives up after 30 s
 ami.event_mask('on').value            # enable event delivery on this connection
 ami.parked_calls.value
 ami.device_state_list.value
@@ -162,7 +163,9 @@ puts response.data[:hints]
 ```
 
 Status values from `RubyAsterisk::DESCRIPTIVE_STATUS`:
-`-1` Not found · `0` Idle · `1` In Use · `2` Busy · `4` Unavailable · `8` Ringing · `16` On Hold
+`-1` Extension not found · `0` Idle · `1` In Use · `2` Busy · `3` Unavailable · `4` Ringing · `5` On Hold
+
+`DescriptiveStatus` is only added for statuses in that map; any other value yields `nil`.
 
 ### Monitor commands
 
