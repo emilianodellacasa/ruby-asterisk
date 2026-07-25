@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - master
+    # Required for the release job below: without a tags filter a tag push does
+    # not trigger this workflow at all, so `if: startsWith(github.ref,
+    # 'refs/tags/v')` would never be evaluated and no release could ever run.
+    tags:
+      - 'v*'
   pull_request:
 
 jobs:
